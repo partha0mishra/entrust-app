@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: entrust_postgres
+    environment:
+      POSTGRES_USER: entrust_user
+      POSTGRES_PASSWORD: entrust_pass
+      POSTGRES_DB: entrust_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - entrust_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U entrust_user -d entrust_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: entrust_backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://entrust_user:entrust_pass@postgres:5432/entrust_db
+      SECRET_KEY: your-secret-key-change-in-production
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 1440
+      LOG_LEVEL: DEBUG
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./questions.json:/app/questions.json
+    networks:
+      - entrust_network
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --log-level debug
+
+  frontend:
+    build: ./frontend
+    container_name: entrust_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - entrust_network
+    stdin_open: true
+    tty: true
+
+volumes:
+  postgres_data:
+
+networks:
+  entrust_network:
+    driver: bridge
