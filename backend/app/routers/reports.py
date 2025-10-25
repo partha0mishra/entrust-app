@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Dict
 import os
+import re
 from pathlib import Path
 from datetime import datetime
 from reportlab.lib.pagesizes import letter, A4
@@ -12,7 +13,6 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
-import markdown
 from .. import models, schemas, auth
 from ..database import get_db
 from ..llm_service import LLMService
@@ -23,31 +23,82 @@ router = APIRouter()
 OUTPUT_DIR = Path("/app/output")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-def markdown_to_text(md_text: str) -> str:
-    """Convert markdown to plain text for PDF"""
-    # Simple conversion - remove markdown formatting
-    text = md_text.replace('**', '').replace('*', '')
-    text = text.replace('###', '').replace('##', '').replace('#', '')
-    text = text.replace('```', '')
-    return text
+def clean_text_for_pdf(text: str) -> str:
+    """
+    Clean text for PDF generation - remove all markdown and HTML formatting
+    """
+    if not text:
+        return ""
+    
+    # Remove code blocks
+    text = re.sub(r'```[\s\S]*?```', '', text)
+    
+    # Remove inline code
+    text = re.sub(r'`[^`]+`', '', text)
+    
+    # Remove bold/italic markdown
+    text = text.replace('**', '').replace('__', '')
+    text = text.replace('*', '').replace('_', '')
+    
+    # Remove headers
+    text = re.sub(r'^#+\s+', '', text, flags=re.MULTILINE)
+    
+    # Remove links but keep text: [text](url) -> text
+    text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
+    
+    # Remove all HTML tags completely
+    text = re.sub(r'<[^>]+>', '', text)
+    
+    # Escape XML special characters for ReportLab
+    text = text.replace('&', '&amp;')
+    text = text.replace('<', '&lt;')
+    text = text.replace('>', '&gt;')
+    
+    # Remove multiple spaces
+    text = re.sub(r' +', ' ', text)
+    
+    # Remove excessive newlines
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    
+    return text.strip()
+
+def add_text_paragraphs(story, text: str, style):
+    """
+    Add text as multiple paragraphs, splitting on double newlines
+    This avoids ReportLab HTML parsing issues
+    """
+    if not text:
+        return
+    
+    # Clean the text first
+    clean_text = clean_text_for_pdf(text)
+    
+    # Split into paragraphs (double newline)
+    paragraphs = clean_text.split('\n\n')
+    
+    for para_text in paragraphs:
+        para_text = para_text.strip()
+        if para_text:
+            try:
+                story.append(Paragraph(para_text, style))
+                story.append(Spacer(1, 0.1*inch))
+            except Exception as e:
+                print(f"Warning: Could not parse paragraph: {e}")
+                continue
 
 def create_dimension_pdf(customer_code: str, dimension: str, report_data: Dict) -> str:
     """Create PDF for dimension report"""
-    # Create customer directory
     customer_dir = OUTPUT_DIR / customer_code
     customer_dir.mkdir(parents=True, exist_ok=True)
     
-    # Create filename
     safe_dimension = dimension.replace(' ', '_').replace('&', 'and')
     filename = f"{safe_dimension}_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     filepath = customer_dir / filename
     
-    # Create PDF
     doc = SimpleDocTemplate(str(filepath), pagesize=letter)
     story = []
     styles = getSampleStyleSheet()
     
-    # Title
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
@@ -61,32 +112,34 @@ def create_dimension_pdf(customer_code: str, dimension: str, report_data: Dict) 
     story.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
     story.append(Spacer(1, 0.3*inch))
     
-    # LLM Summary
     if report_data.get('llm_summary'):
-        story.append(Paragraph("AI-Generated Summary & Suggestions", styles['Heading2']))
-        summary_text = markdown_to_text(report_data['llm_summary'])
-        for para in summary_text.split('\n\n'):
-            if para.strip():
-                story.append(Paragraph(para.strip(), styles['Normal']))
-                story.append(Spacer(1, 0.1*inch))
+        story.append(Paragraph("AI-Generated Summary &amp; Suggestions", styles['Heading2']))
+        story.append(Spacer(1, 0.1*inch))
+        add_text_paragraphs(story, report_data['llm_summary'], styles['Normal'])
         story.append(Spacer(1, 0.3*inch))
     
-    # Questions Table
+    if report_data.get('llm_error'):
+        error_style = ParagraphStyle('Error', parent=styles['Normal'], textColor=colors.red)
+        story.append(Paragraph(f"LLM Error: {clean_text_for_pdf(report_data['llm_error'])}", error_style))
+        story.append(Spacer(1, 0.2*inch))
+    
     story.append(Paragraph("Survey Results", styles['Heading2']))
     story.append(Spacer(1, 0.2*inch))
     
-    # Table data
     table_data = [['Question', 'Responses', 'Min', 'Max', 'Avg']]
     for q in report_data.get('questions', []):
+        question_text = clean_text_for_pdf(q['question'])
+        if len(question_text) > 150:
+            question_text = question_text[:147] + '...'
+        
         table_data.append([
-            Paragraph(q['question'][:100] + '...' if len(q['question']) > 100 else q['question'], styles['Normal']),
-            q['responded'],
+            question_text,
+            str(q['responded']),
             str(q['min_score']) if q['min_score'] is not None else '-',
             str(q['max_score']) if q['max_score'] is not None else '-',
             str(q['avg_score']) if q['avg_score'] is not None else '-'
         ])
     
-    # Create table
     table = Table(table_data, colWidths=[3.5*inch, 0.8*inch, 0.5*inch, 0.5*inch, 0.5*inch])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#00B74F')),
@@ -98,31 +151,26 @@ def create_dimension_pdf(customer_code: str, dimension: str, report_data: Dict) 
         ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
     ]))
     
     story.append(table)
-    
-    # Build PDF
     doc.build(story)
     
     return str(filepath)
 
 def create_overall_pdf(customer_code: str, report_data: Dict) -> str:
     """Create PDF for overall report"""
-    # Create customer directory
     customer_dir = OUTPUT_DIR / customer_code
     customer_dir.mkdir(parents=True, exist_ok=True)
     
-    # Create filename
     filename = f"Overall_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     filepath = customer_dir / filename
     
-    # Create PDF
     doc = SimpleDocTemplate(str(filepath), pagesize=letter)
     story = []
     styles = getSampleStyleSheet()
     
-    # Title
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
@@ -136,41 +184,40 @@ def create_overall_pdf(customer_code: str, report_data: Dict) -> str:
     story.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
     story.append(Spacer(1, 0.3*inch))
     
-    # Executive Summary
     if report_data.get('executive_summary'):
         story.append(Paragraph("Executive Summary", styles['Heading2']))
-        summary_text = markdown_to_text(report_data['executive_summary'])
-        for para in summary_text.split('\n\n'):
-            if para.strip():
-                story.append(Paragraph(para.strip(), styles['Normal']))
-                story.append(Spacer(1, 0.1*inch))
+        story.append(Spacer(1, 0.1*inch))
+        add_text_paragraphs(story, report_data['executive_summary'], styles['Normal'])
         story.append(Spacer(1, 0.3*inch))
     
-    # Dimension Summaries
+    if report_data.get('llm_error'):
+        error_style = ParagraphStyle('Error', parent=styles['Normal'], textColor=colors.red)
+        story.append(Paragraph(f"LLM Error: {clean_text_for_pdf(report_data['llm_error'])}", error_style))
+        story.append(Spacer(1, 0.2*inch))
+    
     story.append(Paragraph("Dimension Analysis", styles['Heading2']))
     story.append(Spacer(1, 0.2*inch))
     
     for dim_report in report_data.get('dimensions', []):
-        story.append(Paragraph(dim_report['dimension'], styles['Heading3']))
+        dim_name = clean_text_for_pdf(dim_report['dimension'])
+        story.append(Paragraph(dim_name, styles['Heading3']))
         
-        # Statistics
-        stats_text = f"Average Score: {dim_report.get('avg_score', 'N/A')} | "
-        stats_text += f"Response Rate: {dim_report.get('response_rate', 'N/A')}"
+        avg_score = dim_report.get('avg_score', 'N/A')
+        response_rate = dim_report.get('response_rate', 'N/A')
+        stats_text = f"Average Score: {avg_score} | Response Rate: {response_rate}"
         story.append(Paragraph(stats_text, styles['Normal']))
         story.append(Spacer(1, 0.1*inch))
         
-        # Summary
         if dim_report.get('summary'):
-            summary_text = markdown_to_text(dim_report['summary'])
-            for para in summary_text.split('\n\n'):
-                if para.strip():
-                    story.append(Paragraph(para.strip(), styles['Normal']))
-                    story.append(Spacer(1, 0.05*inch))
+            add_text_paragraphs(story, dim_report['summary'], styles['Normal'])
         
         story.append(Spacer(1, 0.2*inch))
     
-    # Build PDF
-    doc.build(story)
+    try:
+        doc.build(story)
+    except Exception as e:
+        print(f"Error building PDF: {e}")
+        raise
     
     return str(filepath)
 
@@ -178,9 +225,12 @@ def create_overall_pdf(customer_code: str, report_data: Dict) -> str:
 def get_dimension_reports(
     customer_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.require_report_access)
+    current_user: models.User = Depends(auth.get_current_user)
 ):
     """Get list of available dimension reports"""
+    if current_user.user_type == models.UserType.PARTICIPANT:
+        raise HTTPException(status_code=403, detail="Participants cannot view reports")
+    
     if current_user.user_type == models.UserType.CXO and current_user.customer_id != customer_id:
         raise HTTPException(status_code=403, detail="Can only view your own customer's reports")
     
@@ -199,9 +249,12 @@ async def get_dimension_report(
     customer_id: int,
     dimension: str,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.require_report_access)
+    current_user: models.User = Depends(auth.get_current_user)
 ):
     """Get detailed report for a specific dimension"""
+    if current_user.user_type == models.UserType.PARTICIPANT:
+        raise HTTPException(status_code=403, detail="Participants cannot view reports")
+    
     if current_user.user_type == models.UserType.CXO and current_user.customer_id != customer_id:
         raise HTTPException(status_code=403, detail="Can only view your own customer's reports")
     
@@ -290,9 +343,12 @@ async def get_dimension_report(
 async def get_overall_report(
     customer_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.require_report_access)
+    current_user: models.User = Depends(auth.get_current_user)
 ):
     """Get overall report aggregating all dimensions"""
+    if current_user.user_type == models.UserType.PARTICIPANT:
+        raise HTTPException(status_code=403, detail="Participants cannot view reports")
+    
     if current_user.user_type == models.UserType.CXO and current_user.customer_id != customer_id:
         raise HTTPException(status_code=403, detail="Can only view your own customer's reports")
     
@@ -303,7 +359,6 @@ async def get_overall_report(
     if not survey:
         return {"error": "No survey data available"}
     
-    # Get all dimensions
     dimensions = db.query(models.Question.dimension).distinct().all()
     dimension_summaries = {}
     dimension_reports = []
@@ -314,7 +369,6 @@ async def get_overall_report(
         models.User.is_deleted == False
     ).count()
     
-    # Generate summary for each dimension
     for (dimension,) in dimensions:
         questions = db.query(models.Question).filter(
             models.Question.dimension == dimension
@@ -339,7 +393,6 @@ async def get_overall_report(
         avg_score = round(sum(all_scores) / len(all_scores), 2) if all_scores else None
         response_rate = f"{answered_questions}/{total_questions}"
         
-        # Try to get LLM summary for this dimension
         try:
             llm_config = db.query(models.LLMConfig).filter(
                 models.LLMConfig.purpose == dimension
@@ -379,7 +432,7 @@ async def get_overall_report(
             else:
                 dimension_summaries[dimension] = f"Average Score: {avg_score}, Response Rate: {response_rate}"
         except Exception as e:
-            dimension_summaries[dimension] = f"Average Score: {avg_score}, Response Rate: {response_rate} (LLM Error: {str(e)})"
+            dimension_summaries[dimension] = f"Average Score: {avg_score}, Response Rate: {response_rate}"
         
         dimension_reports.append({
             "dimension": dimension,
@@ -388,7 +441,6 @@ async def get_overall_report(
             "summary": dimension_summaries[dimension]
         })
     
-    # Generate overall executive summary using Orchestrate or Default LLM
     executive_summary = None
     llm_error = None
     
@@ -423,22 +475,25 @@ async def download_dimension_report(
     customer_id: int,
     dimension: str,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.require_report_access)
+    current_user: models.User = Depends(auth.get_current_user)
 ):
     """Download dimension report as PDF"""
+    if current_user.user_type == models.UserType.PARTICIPANT:
+        raise HTTPException(status_code=403, detail="Participants cannot view reports")
+    
     if current_user.user_type == models.UserType.CXO and current_user.customer_id != customer_id:
         raise HTTPException(status_code=403, detail="Can only view your own customer's reports")
     
-    # Get customer code
     customer = db.query(models.Customer).filter(models.Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     
-    # Get report data
     report_response = await get_dimension_report(customer_id, dimension, db, current_user)
     
-    # Create PDF
-    pdf_path = create_dimension_pdf(customer.customer_code, dimension, report_response)
+    try:
+        pdf_path = create_dimension_pdf(customer.customer_code, dimension, report_response)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate PDF: {str(e)}")
     
     return FileResponse(
         pdf_path,
@@ -450,22 +505,25 @@ async def download_dimension_report(
 async def download_overall_report(
     customer_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.require_report_access)
+    current_user: models.User = Depends(auth.get_current_user)
 ):
     """Download overall report as PDF"""
+    if current_user.user_type == models.UserType.PARTICIPANT:
+        raise HTTPException(status_code=403, detail="Participants cannot view reports")
+    
     if current_user.user_type == models.UserType.CXO and current_user.customer_id != customer_id:
         raise HTTPException(status_code=403, detail="Can only view your own customer's reports")
     
-    # Get customer code
     customer = db.query(models.Customer).filter(models.Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
     
-    # Get report data
     report_response = await get_overall_report(customer_id, db, current_user)
     
-    # Create PDF
-    pdf_path = create_overall_pdf(customer.customer_code, report_response)
+    try:
+        pdf_path = create_overall_pdf(customer.customer_code, report_response)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate PDF: {str(e)}")
     
     return FileResponse(
         pdf_path,
