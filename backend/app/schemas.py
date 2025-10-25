@@ -1,9 +1,8 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 from .models import UserType
 
-# Customer Schemas
 class CustomerBase(BaseModel):
     name: str
     customer_code: str
@@ -22,10 +21,8 @@ class Customer(CustomerBase):
     is_deleted: bool
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
-# User Schemas
 class UserBase(BaseModel):
     user_id: str
     username: str
@@ -45,25 +42,23 @@ class User(UserBase):
     id: int
     is_deleted: bool
     created_at: datetime
+    password: Optional[str] = None  # For returning decrypted password to admin
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class UserWithCustomer(User):
     customer: Optional[Customer] = None
 
-# Authentication Schemas
 class Token(BaseModel):
     access_token: str
     token_type: str
     user: User
 
-# LLM Config Schemas
 class LLMConfigBase(BaseModel):
     purpose: str
     api_url: str
-    api_key: Optional[str] = "None"
-    model_name: Optional[str] = "default"  # NEW FIELD
+    api_key: Optional[str] = None
+    model_name: Optional[str] = "default"  # ADD THIS LINE
 
 class LLMConfigCreate(LLMConfigBase):
     pass
@@ -76,10 +71,8 @@ class LLMConfig(LLMConfigBase):
     status: str
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
-# Question Schemas
 class QuestionBase(BaseModel):
     question_id: int
     text: str
@@ -91,10 +84,8 @@ class QuestionBase(BaseModel):
 class Question(QuestionBase):
     id: int
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
-# Survey Response Schemas
 class SurveyResponseCreate(BaseModel):
     question_id: int
     score: Optional[str] = None
@@ -113,10 +104,8 @@ class SurveyResponse(BaseModel):
     comment: Optional[str]
     updated_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
-# Survey Schemas
 class Survey(BaseModel):
     id: int
     customer_id: int
@@ -124,10 +113,8 @@ class Survey(BaseModel):
     submitted_at: Optional[datetime]
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
-# Progress Tracking Schema
 class DimensionProgress(BaseModel):
     dimension: str
     total_questions: int

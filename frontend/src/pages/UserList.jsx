@@ -148,8 +148,11 @@ export default function UserList() {
                   >
                     {showPassword[user.id] ? 'Hide' : 'View'}
                   </button>
-                  {showPassword[user.id] && (
-                    <span className="ml-2 text-gray-600">••••••</span>
+                  {showPassword[user.id] && user.password && (
+                    <span className="ml-2 font-mono text-gray-900">{user.password}</span>
+                  )}
+                  {showPassword[user.id] && !user.password && (
+                    <span className="ml-2 text-gray-500 italic">Not available</span>
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">

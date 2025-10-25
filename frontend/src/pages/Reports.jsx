@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { reportAPI } from '../api';
 import Breadcrumb from '../components/Breadcrumb';
+import ReactMarkdown from 'react-markdown';
 
 export default function Reports() {
   const [user, setUser] = useState(null);
@@ -9,6 +10,7 @@ export default function Reports() {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [customerCode, setCustomerCode] = useState(null);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -70,6 +72,41 @@ export default function Reports() {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    if (!user || !selectedDimension) return;
+
+    setDownloading(true);
+    try {
+      let response;
+      if (selectedDimension === 'Overall') {
+        response = await reportAPI.downloadOverallPDF(user.customer_id);
+      } else {
+        response = await reportAPI.downloadDimensionPDF(user.customer_id, selectedDimension);
+      }
+      
+      // Create blob from response
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = url;
+      const safeDimension = selectedDimension.replace(/[^a-zA-Z0-9]/g, '_');
+      link.download = `${customerCode}_${safeDimension}_Report.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to download PDF:', error);
+      alert('Failed to download PDF: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div>
       <Breadcrumb 
@@ -117,11 +154,70 @@ export default function Reports() {
           <h2 className="text-2xl font-bold mb-6">{selectedDimension} Report</h2>
 
           {selectedDimension === 'Overall' ? (
-            <div className="bg-blue-50 p-6 rounded">
-              <h3 className="font-bold text-lg mb-2">Overall Report - Coming Soon</h3>
-              <p className="text-gray-700">{report.message}</p>
-              <p className="text-sm text-gray-600 mt-2">{report.note}</p>
-            </div>
+            <>
+              {report.executive_summary && (
+                <div className="mb-8 bg-purple-50 p-6 rounded-lg border border-purple-200">
+                  <h3 className="text-lg font-bold mb-3 text-purple-700">
+                    🤖 Executive Summary
+                  </h3>
+                  <div className="prose prose-sm max-w-none text-gray-700">
+                    <ReactMarkdown>{report.executive_summary}</ReactMarkdown>
+                  </div>
+                </div>
+              )}
+
+              {report.llm_error && (
+                <div className="mb-8 bg-red-50 p-6 rounded-lg border border-red-200">
+                  <h3 className="text-lg font-bold mb-3 text-red-700">
+                    ⚠️ LLM Analysis Error
+                  </h3>
+                  <p className="text-red-600">{report.llm_error}</p>
+                  <p className="text-sm text-gray-600 mt-2">
+                    The dimension reports below are still available.
+                  </p>
+                </div>
+              )}
+
+              {report.dimensions && report.dimensions.length > 0 && (
+                <div className="space-y-6">
+                  <h3 className="text-xl font-bold mb-4">Dimension Analysis</h3>
+                  {report.dimensions.map((dim) => (
+                    <div key={dim.dimension} className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                      <h4 className="text-lg font-bold mb-3 text-gray-900">{dim.dimension}</h4>
+                      
+                      <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                        <div>
+                          <span className="text-gray-600">Average Score:</span>
+                          <span className="ml-2 font-semibold text-gray-900">
+                            {dim.avg_score !== null ? dim.avg_score.toFixed(2) : 'N/A'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Response Rate:</span>
+                          <span className="ml-2 font-semibold text-gray-900">{dim.response_rate}</span>
+                        </div>
+                      </div>
+
+                      {dim.summary && (
+                        <div className="prose prose-sm max-w-none text-gray-700 mt-3">
+                          <ReactMarkdown>{dim.summary}</ReactMarkdown>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-6 flex space-x-4">
+                <button 
+                  onClick={handleDownloadPDF}
+                  disabled={downloading}
+                  className="px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {downloading ? 'Downloading...' : 'Download PDF'}
+                </button>
+              </div>
+            </>
           ) : (
             <>
               {report.llm_summary && (
@@ -129,7 +225,9 @@ export default function Reports() {
                   <h3 className="text-lg font-bold mb-3 text-encora-green">
                     🤖 AI-Generated Summary & Suggestions
                   </h3>
-                  <p className="text-gray-700 whitespace-pre-wrap">{report.llm_summary}</p>
+                  <div className="prose prose-sm max-w-none text-gray-700">
+                    <ReactMarkdown>{report.llm_summary}</ReactMarkdown>
+                  </div>
                 </div>
               )}
 
@@ -191,8 +289,12 @@ export default function Reports() {
               </div>
 
               <div className="mt-6 flex space-x-4">
-                <button className="px-4 py-2 bg-encora-green text-white rounded hover:bg-green-600">
-                  Download PDF (Coming Soon)
+                <button 
+                  onClick={handleDownloadPDF}
+                  disabled={downloading}
+                  className="px-6 py-2 bg-encora-green text-white rounded hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {downloading ? 'Downloading...' : 'Download PDF'}
                 </button>
               </div>
             </>

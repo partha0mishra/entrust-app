@@ -70,6 +70,14 @@ export const reportAPI = {
   getDimensionReport: (customerId, dimension) => 
     api.get(`/reports/customer/${customerId}/dimension/${dimension}`),
   getOverallReport: (customerId) => api.get(`/reports/customer/${customerId}/overall`),
+  downloadDimensionPDF: (customerId, dimension) => 
+    api.get(`/reports/customer/${customerId}/dimension/${dimension}/download`, {
+      responseType: 'blob'
+    }),
+  downloadOverallPDF: (customerId) => 
+    api.get(`/reports/customer/${customerId}/overall/download`, {
+      responseType: 'blob'
+    }),
 };
 
 export default api;
