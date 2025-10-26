@@ -61,11 +61,12 @@ def get_survey_progress(
             models.Question.dimension == dimension
         ).count()
         
-        # Count answered questions in this dimension
+        # Count answered questions in this dimension for the CURRENT USER
         answered_questions = db.query(models.SurveyResponse).join(
             models.Question
         ).filter(
             models.SurveyResponse.survey_id == survey.id,
+            models.SurveyResponse.user_id == current_user.id,
             models.Question.dimension == dimension,
             models.SurveyResponse.score.isnot(None)
         ).distinct(models.SurveyResponse.question_id).count()
@@ -296,10 +297,11 @@ def get_survey_status(
             "customer_code": customer.customer_code if customer else None
         }
     
-    # Calculate progress
+    # Calculate progress for the CURRENT USER
     total_questions = db.query(models.Question).count()
     answered = db.query(models.SurveyResponse).filter(
         models.SurveyResponse.survey_id == survey.id,
+        models.SurveyResponse.user_id == current_user.id,
         models.SurveyResponse.score.isnot(None)
     ).distinct(models.SurveyResponse.question_id).count()
     

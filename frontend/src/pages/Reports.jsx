@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+// frontend/src/pages/Reports.jsx
+import { useState, useEffect, useRef } from 'react';
 import { reportAPI } from '../api';
 import Breadcrumb from '../components/Breadcrumb';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function Reports() {
   const [user, setUser] = useState(null);
@@ -11,33 +13,89 @@ export default function Reports() {
   const [loading, setLoading] = useState(false);
   const [customerCode, setCustomerCode] = useState(null);
   const [downloading, setDownloading] = useState(false);
+  const reportRef = useRef(null);
+  const [customers, setCustomers] = useState([]);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [isSalesUser, setIsSalesUser] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (userData) {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
-      loadDimensions(parsedUser);
+      
+      // Debug: Log user type
+      console.log('User data:', parsedUser);
+      console.log('User type:', parsedUser.user_type);
+      
+      const salesUser = parsedUser.user_type === 'Sales' || parsedUser.user_type === 'SALES';
+      setIsSalesUser(salesUser);
+      
+      if (salesUser) {
+        loadCustomers(parsedUser);
+      } else {
+        loadDimensions(parsedUser, parsedUser.customer_id);
+      }
     }
   }, []);
 
-  const loadDimensions = async (userData) => {
+  const loadCustomers = async (userData) => {
     try {
-      const customerId = userData.customer_id;
-      const response = await reportAPI.getDimensions(customerId);
-      setDimensions(response.data);
-      
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const statusResponse = await fetch(`${API_URL}/api/survey/status`, {
+      const response = await fetch(`${API_URL}/api/reports/customers`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      const statusData = await statusResponse.json();
-      setCustomerCode(statusData.customer_code);
+      const data = await response.json();
+      
+      // Debug: Log customers
+      console.log('Customers loaded:', data);
+      console.log('Number of customers:', data.length);
+      
+      setCustomers(data);
+      
+      // Select first customer by default
+      if (data.length > 0) {
+        setSelectedCustomer(data[0]);
+        loadDimensions(userData, data[0].id);
+      }
+    } catch (error) {
+      console.error('Failed to load customers:', error);
+    }
+  };
+
+  const loadDimensions = async (userData, customerId) => {
+    try {
+      const response = await reportAPI.getDimensions(customerId);
+      
+      // Check if response indicates no survey
+      if (response.data && typeof response.data === 'object' && response.data.message) {
+        setDimensions([]);
+        console.log('No survey data for this customer');
+      } else {
+        setDimensions(response.data);
+      }
+      
+      // Find customer code
+      const customer = [...customers, selectedCustomer].find(c => c && c.id === customerId);
+      if (customer) {
+        setCustomerCode(customer.customer_code || null);
+      }
     } catch (error) {
       console.error('Failed to load dimensions:', error);
+      setDimensions([]);
     }
+  };
+
+  const handleCustomerChange = (event) => {
+    const customer = customers.find(c => c.id === parseInt(event.target.value));
+    setSelectedCustomer(customer);
+    setCustomerCode(customer?.customer_code || null);
+    loadDimensions(user, customer.id);
+    // Clear current report when changing customer
+    setReport(null);
+    setSelectedDimension(null);
   };
 
   const loadDimensionReport = async (dimension) => {
@@ -46,7 +104,8 @@ export default function Reports() {
     setReport(null);
 
     try {
-      const response = await reportAPI.getDimensionReport(user.customer_id, dimension);
+      const customerId = isSalesUser ? (selectedCustomer?.id || user.customer_id) : user.customer_id;
+      const response = await reportAPI.getDimensionReport(customerId, dimension);
       setReport(response.data);
     } catch (error) {
       console.error('Failed to load report:', error);
@@ -62,7 +121,8 @@ export default function Reports() {
     setReport(null);
 
     try {
-      const response = await reportAPI.getOverallReport(user.customer_id);
+      const customerId = isSalesUser ? (selectedCustomer?.id || user.customer_id) : user.customer_id;
+      const response = await reportAPI.getOverallReport(customerId);
       setReport(response.data);
     } catch (error) {
       console.error('Failed to load overall report:', error);
@@ -73,38 +133,121 @@ export default function Reports() {
   };
 
   const handleDownloadPDF = async () => {
-    if (!user || !selectedDimension) return;
+    if (!reportRef.current) return;
 
     setDownloading(true);
     try {
-      let response;
-      if (selectedDimension === 'Overall') {
-        response = await reportAPI.downloadOverallPDF(user.customer_id);
-      } else {
-        response = await reportAPI.downloadDimensionPDF(user.customer_id, selectedDimension);
+      // Dynamically import jsPDF and html2canvas
+      const { default: jsPDF } = await import('jspdf');
+      const html2canvas = (await import('html2canvas')).default;
+
+      // Create a clone of the report content for PDF generation
+      const content = reportRef.current.cloneNode(true);
+      
+      // Remove download button from clone
+      const buttons = content.querySelectorAll('button');
+      buttons.forEach(btn => btn.remove());
+
+      // Create a temporary container
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.width = '210mm'; // A4 width
+      tempContainer.style.padding = '20px';
+      tempContainer.style.backgroundColor = 'white';
+      tempContainer.appendChild(content);
+      document.body.appendChild(tempContainer);
+
+      // Generate canvas from HTML
+      const canvas = await html2canvas(tempContainer, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+
+      // Calculate PDF dimensions
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pageHeight = 297; // A4 height in mm
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add image to PDF (handle multiple pages if needed)
+      const imgData = canvas.toDataURL('image/png');
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
       }
-      
-      // Create blob from response
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      
-      // Create download link
-      const link = document.createElement('a');
-      link.href = url;
+
+      // Save PDF
       const safeDimension = selectedDimension.replace(/[^a-zA-Z0-9]/g, '_');
-      link.download = `${customerCode}_${safeDimension}_Report.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      
+      const filename = `${customerCode}_${safeDimension}_Report.pdf`;
+      pdf.save(filename);
+
       // Cleanup
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      document.body.removeChild(tempContainer);
     } catch (error) {
-      console.error('Failed to download PDF:', error);
-      alert('Failed to download PDF: ' + (error.response?.data?.detail || error.message));
+      console.error('Failed to generate PDF:', error);
+      alert('Failed to generate PDF. Please ensure you have a stable internet connection.');
     } finally {
       setDownloading(false);
     }
+  };
+
+  // Custom markdown components for better rendering
+  const markdownComponents = {
+    // Add proper spacing between paragraphs
+    p: ({node, ...props}) => <p className="mb-4 leading-relaxed" {...props} />,
+    
+    // Style headers with proper spacing
+    h1: ({node, ...props}) => <h1 className="text-2xl font-bold mb-4 mt-6" {...props} />,
+    h2: ({node, ...props}) => <h2 className="text-xl font-bold mb-3 mt-5" {...props} />,
+    h3: ({node, ...props}) => <h3 className="text-lg font-bold mb-2 mt-4" {...props} />,
+    
+    // Style lists with proper spacing
+    ul: ({node, ...props}) => <ul className="list-disc list-inside mb-4 space-y-2" {...props} />,
+    ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-4 space-y-2" {...props} />,
+    li: ({node, ...props}) => <li className="ml-4" {...props} />,
+    
+    // Style tables properly
+    table: ({node, ...props}) => (
+      <div className="overflow-x-auto mb-4">
+        <table className="min-w-full divide-y divide-gray-300 border border-gray-300" {...props} />
+      </div>
+    ),
+    thead: ({node, ...props}) => <thead className="bg-gray-100" {...props} />,
+    tbody: ({node, ...props}) => <tbody className="divide-y divide-gray-200" {...props} />,
+    tr: ({node, ...props}) => <tr className="hover:bg-gray-50" {...props} />,
+    th: ({node, ...props}) => (
+      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-900 border-r border-gray-300 last:border-r-0" {...props} />
+    ),
+    td: ({node, ...props}) => (
+      <td className="px-4 py-3 text-sm text-gray-700 border-r border-gray-200 last:border-r-0" {...props} />
+    ),
+    
+    // Style code blocks
+    code: ({node, inline, ...props}) => 
+      inline ? (
+        <code className="bg-gray-100 px-1 py-0.5 rounded text-sm" {...props} />
+      ) : (
+        <code className="block bg-gray-100 p-4 rounded mb-4 text-sm overflow-x-auto" {...props} />
+      ),
+    
+    // Style blockquotes
+    blockquote: ({node, ...props}) => (
+      <blockquote className="border-l-4 border-encora-green pl-4 italic my-4 text-gray-700" {...props} />
+    ),
+    
+    // Add line breaks
+    br: ({node, ...props}) => <br className="my-2" {...props} />,
   };
 
   return (
@@ -114,7 +257,25 @@ export default function Reports() {
         customerCode={customerCode}
       />
 
-      <h1 className="text-3xl font-bold mb-6">Reports</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Reports</h1>
+        {isSalesUser && customers.length > 0 && (
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium text-gray-700">Customer:</label>
+            <select
+              value={selectedCustomer?.id || ''}
+              onChange={handleCustomerChange}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-encora-green focus:border-transparent"
+            >
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.name} ({customer.customer_code}){!customer.has_survey ? ' - No Survey' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <button
@@ -144,67 +305,133 @@ export default function Reports() {
       </div>
 
       {loading && (
-        <div className="bg-white rounded-lg shadow p-8 text-center">
-          <div className="text-gray-600">Loading report...</div>
+        <div className="bg-white rounded-lg shadow p-8">
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-encora-green"></div>
+            <span className="ml-4 text-gray-600 text-lg">Loading report...</span>
+          </div>
+          <p className="text-center text-gray-500 mt-4 text-sm">
+            Analyzing survey data and generating insights...
+          </p>
         </div>
       )}
 
       {report && !loading && (
-        <div className="bg-white rounded-lg shadow p-8">
+        <div className="bg-white rounded-lg shadow p-8" ref={reportRef}>
           <h2 className="text-2xl font-bold mb-6">{selectedDimension} Report</h2>
 
           {selectedDimension === 'Overall' ? (
             <>
-              {report.executive_summary && (
-                <div className="mb-8 bg-purple-50 p-6 rounded-lg border border-purple-200">
-                  <h3 className="text-lg font-bold mb-3 text-purple-700">
-                    🤖 Executive Summary
+              {/* Overall Summary */}
+              {report.overall_summary && (
+                <div className="mb-8 bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-lg border-2 border-purple-200">
+                  <h3 className="text-lg font-bold mb-4 text-purple-800 flex items-center">
+                    <span className="text-2xl mr-2">🤖</span>
+                    Executive Summary
                   </h3>
-                  <div className="prose prose-sm max-w-none text-gray-700">
-                    <ReactMarkdown>{report.executive_summary}</ReactMarkdown>
+                  <div className="prose prose-sm max-w-none text-gray-800">
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]}
+                      components={markdownComponents}
+                    >
+                      {report.overall_summary}
+                    </ReactMarkdown>
                   </div>
                 </div>
               )}
 
-              {report.llm_error && (
-                <div className="mb-8 bg-red-50 p-6 rounded-lg border border-red-200">
-                  <h3 className="text-lg font-bold mb-3 text-red-700">
-                    ⚠️ LLM Analysis Error
+              {/* Overall Error */}
+              {report.overall_error && (
+                <div className="mb-8 bg-red-50 p-6 rounded-lg border-2 border-red-200">
+                  <h3 className="text-lg font-bold mb-3 text-red-700 flex items-center">
+                    <span className="text-2xl mr-2">⚠️</span>
+                    LLM Analysis Error
                   </h3>
-                  <p className="text-red-600">{report.llm_error}</p>
-                  <p className="text-sm text-gray-600 mt-2">
+                  <p className="text-red-600 mb-2">{report.overall_error}</p>
+                  <p className="text-sm text-gray-600">
                     The dimension reports below are still available.
                   </p>
                 </div>
               )}
 
-              {report.dimensions && report.dimensions.length > 0 && (
-                <div className="space-y-6">
+              {/* Overall Statistics */}
+              {report.overall_stats && (
+                <div className="mb-8 bg-gray-50 p-6 rounded-lg border border-gray-200">
+                  <h3 className="text-xl font-bold mb-4">Survey Statistics</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-white p-4 rounded-lg shadow-sm">
+                      <div className="text-2xl font-bold text-encora-green">
+                        {report.overall_stats.total_questions}
+                      </div>
+                      <div className="text-sm text-gray-600">Total Questions</div>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg shadow-sm">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {report.total_participants}
+                      </div>
+                      <div className="text-sm text-gray-600">Participants</div>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg shadow-sm">
+                      <div className="text-2xl font-bold text-purple-600">
+                        {report.overall_stats.avg_score_overall.toFixed(2)}
+                      </div>
+                      <div className="text-sm text-gray-600">Average Score</div>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg shadow-sm">
+                      <div className="text-2xl font-bold text-orange-600">
+                        {report.overall_stats.dimensions?.length || 0}
+                      </div>
+                      <div className="text-sm text-gray-600">Dimensions</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Dimension Summaries */}
+              {report.dimension_summaries && Object.keys(report.dimension_summaries).length > 0 && (
+                <div className="space-y-6 mb-8">
                   <h3 className="text-xl font-bold mb-4">Dimension Analysis</h3>
-                  {report.dimensions.map((dim) => (
-                    <div key={dim.dimension} className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-                      <h4 className="text-lg font-bold mb-3 text-gray-900">{dim.dimension}</h4>
-                      
-                      <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                        <div>
-                          <span className="text-gray-600">Average Score:</span>
-                          <span className="ml-2 font-semibold text-gray-900">
-                            {dim.avg_score !== null ? dim.avg_score.toFixed(2) : 'N/A'}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Response Rate:</span>
-                          <span className="ml-2 font-semibold text-gray-900">{dim.response_rate}</span>
+                  {Object.entries(report.dimension_summaries).map(([dimension, summary]) => {
+                    const dimStats = report.overall_stats?.dimensions?.find(d => d.dimension === dimension);
+                    
+                    return (
+                      <div key={dimension} className="bg-gradient-to-r from-green-50 to-teal-50 p-6 rounded-lg border-2 border-green-200">
+                        <h4 className="text-lg font-bold mb-3 text-gray-900">{dimension}</h4>
+                        
+                        {dimStats && (
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4 text-sm">
+                            <div className="bg-white p-3 rounded shadow-sm">
+                              <span className="text-gray-600">Avg Score:</span>
+                              <span className="ml-2 font-bold text-encora-green">
+                                {dimStats.avg_score !== null ? dimStats.avg_score.toFixed(2) : 'N/A'}
+                              </span>
+                            </div>
+                            <div className="bg-white p-3 rounded shadow-sm">
+                              <span className="text-gray-600">Min Score:</span>
+                              <span className="ml-2 font-bold text-orange-600">
+                                {dimStats.min_score !== null ? dimStats.min_score.toFixed(2) : 'N/A'}
+                              </span>
+                            </div>
+                            <div className="bg-white p-3 rounded shadow-sm">
+                              <span className="text-gray-600">Max Score:</span>
+                              <span className="ml-2 font-bold text-blue-600">
+                                {dimStats.max_score !== null ? dimStats.max_score.toFixed(2) : 'N/A'}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="prose prose-sm max-w-none text-gray-800 bg-white p-4 rounded">
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm]}
+                            components={markdownComponents}
+                          >
+                            {summary}
+                          </ReactMarkdown>
                         </div>
                       </div>
-
-                      {dim.summary && (
-                        <div className="prose prose-sm max-w-none text-gray-700 mt-3">
-                          <ReactMarkdown>{dim.summary}</ReactMarkdown>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
@@ -212,38 +439,63 @@ export default function Reports() {
                 <button 
                   onClick={handleDownloadPDF}
                   disabled={downloading}
-                  className="px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center shadow-md hover:shadow-lg transition"
                 >
-                  {downloading ? 'Downloading...' : 'Download PDF'}
+                  {downloading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Generating PDF...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Download PDF
+                    </>
+                  )}
                 </button>
               </div>
             </>
           ) : (
             <>
+              {/* Dimension LLM Summary */}
               {report.llm_summary && (
-                <div className="mb-8 bg-green-50 p-6 rounded-lg border border-green-200">
-                  <h3 className="text-lg font-bold mb-3 text-encora-green">
-                    🤖 AI-Generated Summary & Suggestions
+                <div className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border-2 border-green-200">
+                  <h3 className="text-lg font-bold mb-4 text-encora-green flex items-center">
+                    <span className="text-2xl mr-2">🤖</span>
+                    AI-Generated Summary & Suggestions
                   </h3>
-                  <div className="prose prose-sm max-w-none text-gray-700">
-                    <ReactMarkdown>{report.llm_summary}</ReactMarkdown>
+                  <div className="prose prose-sm max-w-none text-gray-800">
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]}
+                      components={markdownComponents}
+                    >
+                      {report.llm_summary}
+                    </ReactMarkdown>
                   </div>
                 </div>
               )}
 
+              {/* Dimension Error */}
               {report.llm_error && (
-                <div className="mb-8 bg-red-50 p-6 rounded-lg border border-red-200">
-                  <h3 className="text-lg font-bold mb-3 text-red-700">
-                    ⚠️ LLM Analysis Error
+                <div className="mb-8 bg-red-50 p-6 rounded-lg border-2 border-red-200">
+                  <h3 className="text-lg font-bold mb-3 text-red-700 flex items-center">
+                    <span className="text-2xl mr-2">⚠️</span>
+                    LLM Analysis Error
                   </h3>
-                  <p className="text-red-600">{report.llm_error}</p>
-                  <p className="text-sm text-gray-600 mt-2">
+                  <p className="text-red-600 mb-2">{report.llm_error}</p>
+                  <p className="text-sm text-gray-600">
                     The report data below is still available. Please check LLM configuration.
                   </p>
                 </div>
               )}
 
-              <div className="overflow-x-auto">
+              {/* Question Data Table */}
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
@@ -292,9 +544,24 @@ export default function Reports() {
                 <button 
                   onClick={handleDownloadPDF}
                   disabled={downloading}
-                  className="px-6 py-2 bg-encora-green text-white rounded hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className="px-6 py-3 bg-encora-green text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center shadow-md hover:shadow-lg transition"
                 >
-                  {downloading ? 'Downloading...' : 'Download PDF'}
+                  {downloading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Generating PDF...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Download PDF
+                    </>
+                  )}
                 </button>
               </div>
             </>

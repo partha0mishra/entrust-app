@@ -1,5 +1,5 @@
 import httpx
-from typing import List, Dict, Optional, AsyncGenerator
+from typing import List, Dict, Optional
 import json
 
 class LLMService:
@@ -10,7 +10,7 @@ class LLMService:
     LLM_TIMEOUT = 180.0  # 3 minutes
     
     @staticmethod
-    async def test_llm_connection(api_url: str, api_key: Optional[str] = None) -> Dict:
+    async def test_llm_connection(api_url: str, api_key: Optional[str] = None, model_name: str = "default") -> Dict:
         """Test LLM connection with a simple message"""
         headers = {
             "Content-Type": "application/json"
@@ -19,7 +19,7 @@ class LLMService:
             headers["Authorization"] = f"Bearer {api_key}"
         
         payload = {
-            "model": "default",
+            "model": model_name,  # CHANGED: Use parameter instead of hardcoded
             "messages": [
                 {"role": "user", "content": "Hello, this is a test message."}
             ],
@@ -73,7 +73,8 @@ class LLMService:
         api_url: str,
         api_key: Optional[str],
         messages: List[Dict],
-        max_tokens: int = 500
+        max_tokens: int = 500,
+        model_name: str = "default"  # CHANGED: Added parameter
     ) -> str:
         """Helper method to call LLM API with timeout and error handling"""
         headers = {
@@ -83,7 +84,7 @@ class LLMService:
             headers["Authorization"] = f"Bearer {api_key}"
         
         payload = {
-            "model": "default",
+            "model": model_name,  # CHANGED: Use parameter instead of hardcoded
             "messages": messages,
             "max_tokens": max_tokens
         }
@@ -112,7 +113,8 @@ class LLMService:
         api_url: str,
         api_key: Optional[str],
         dimension: str,
-        questions_data: List[Dict]
+        questions_data: List[Dict],
+        model_name: str = "default"  # CHANGED: Added parameter
     ) -> Dict:
         """
         Generate dimension summary with chunking support
@@ -150,12 +152,12 @@ Questions and Responses:
                     chunk_prompt += "\n\nProvide a concise summary of the current state and actionable suggestions for improvement."
                 
                 messages = [
-                    {"role": "system", "content": "You are a data governance expert analyzing survey responses. Provide clear, actionable insights in markdown format with proper headers, bullet points, and line breaks."},
+                    {"role": "system", "content": "You are a data governance expert writing a professional report analyzing survey responses. Write in a formal, report-style format suitable for executive review. Use third-person perspective. Do NOT use first person (I, we) or ask questions. Do NOT include interactive elements like 'Let me analyze' or 'Would you like'. Provide clear, actionable insights in markdown format with proper headers, bullet points, and line breaks."},
                     {"role": "user", "content": chunk_prompt}
                 ]
                 
                 chunk_summary = await LLMService._call_llm(
-                    api_url, api_key, messages, max_tokens=800
+                    api_url, api_key, messages, max_tokens=800, model_name=model_name  # CHANGED: Pass model_name
                 )
                 
                 chunk_summaries.append({
@@ -180,12 +182,12 @@ Questions and Responses:
                 consolidation_prompt += "Use markdown formatting with clear headers and bullet points."
                 
                 messages = [
-                    {"role": "system", "content": "You are a data governance expert providing executive summaries. Use markdown formatting with proper line breaks and structure."},
+                    {"role": "system", "content": "You are a data governance expert writing a professional executive report. Write in a formal, report-style format suitable for C-level executives and board members. Use third-person perspective. Do NOT use first person (I, we) or ask questions. Do NOT include interactive elements or conversational language. Use markdown formatting with proper line breaks and structure."},
                     {"role": "user", "content": consolidation_prompt}
                 ]
                 
                 final_summary = await LLMService._call_llm(
-                    api_url, api_key, messages, max_tokens=1000
+                    api_url, api_key, messages, max_tokens=1000, model_name=model_name  # CHANGED: Pass model_name
                 )
             
             return {
@@ -207,7 +209,8 @@ Questions and Responses:
     async def generate_overall_summary(
         api_url: str,
         api_key: Optional[str],
-        dimension_summaries: Dict[str, str]
+        dimension_summaries: Dict[str, str],
+        model_name: str = "default"  # CHANGED: Added parameter
     ) -> Dict:
         """
         Generate overall summary from dimension summaries with chunking support
@@ -250,12 +253,12 @@ Questions and Responses:
                     chunk_prompt += f"\n\nProvide a consolidated assessment focusing on cross-cutting themes and strategic insights from these dimensions."
                     
                     messages = [
-                        {"role": "system", "content": "You are a senior data governance consultant providing executive-level insights. Use markdown formatting."},
+                        {"role": "system", "content": "You are a senior data governance consultant writing a professional executive report. Write in a formal, report-style format suitable for C-level executives. Use third-person perspective. Do NOT use first person (I, we) or ask questions. Do NOT include interactive elements or conversational language. Use markdown formatting."},
                         {"role": "user", "content": chunk_prompt}
                     ]
                     
                     chunk_summary = await LLMService._call_llm(
-                        api_url, api_key, messages, max_tokens=800
+                        api_url, api_key, messages, max_tokens=800, model_name=model_name  # CHANGED: Pass model_name
                     )
                     chunk_summaries.append(chunk_summary)
                 
@@ -275,12 +278,12 @@ Questions and Responses:
 Use clear markdown formatting with headers, bullet points, and proper line breaks."""
                 
                 messages = [
-                    {"role": "system", "content": "You are a Chief Data Officer providing board-level strategic guidance. Use markdown formatting."},
+                    {"role": "system", "content": "You are a Chief Data Officer writing a professional board-level strategic report. Write in a formal, report-style format suitable for board members and C-level executives. Use third-person perspective. Do NOT use first person (I, we) or ask questions. Do NOT include interactive elements or conversational language. Use markdown formatting."},
                     {"role": "user", "content": final_prompt}
                 ]
                 
                 final_summary = await LLMService._call_llm(
-                    api_url, api_key, messages, max_tokens=1200
+                    api_url, api_key, messages, max_tokens=1200, model_name=model_name  # CHANGED: Pass model_name
                 )
                 
                 return {
@@ -304,12 +307,12 @@ Use clear markdown formatting with headers, bullet points, and proper line break
 Use markdown formatting with clear headers and bullet points."""
                 
                 messages = [
-                    {"role": "system", "content": "You are a senior data governance consultant providing executive-level insights. Use markdown formatting."},
+                    {"role": "system", "content": "You are a senior data governance consultant writing a professional executive report. Write in a formal, report-style format suitable for C-level executives. Use third-person perspective. Do NOT use first person (I, we) or ask questions. Do NOT include interactive elements or conversational language. Use markdown formatting."},
                     {"role": "user", "content": prompt}
                 ]
                 
                 summary = await LLMService._call_llm(
-                    api_url, api_key, messages, max_tokens=1200
+                    api_url, api_key, messages, max_tokens=1200, model_name=model_name  # CHANGED: Pass model_name
                 )
                 
                 return {

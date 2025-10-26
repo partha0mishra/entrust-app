@@ -66,6 +66,7 @@ export const surveyAPI = {
 };
 
 export const reportAPI = {
+  getCustomers: () => api.get('/reports/customers'),
   getDimensions: (customerId) => api.get(`/reports/customer/${customerId}/dimensions`),
   getDimensionReport: (customerId, dimension) => 
     api.get(`/reports/customer/${customerId}/dimension/${dimension}`),
