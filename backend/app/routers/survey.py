@@ -192,11 +192,16 @@ def save_response(
         db.commit()
         db.refresh(survey)
     
-    # Check if survey is already submitted
-    if survey.status == "Submitted":
+    # Check if current user has already submitted
+    user_submission = db.query(models.UserSurveySubmission).filter(
+        models.UserSurveySubmission.survey_id == survey.id,
+        models.UserSurveySubmission.user_id == current_user.id
+    ).first()
+
+    if user_submission:
         raise HTTPException(
-            status_code=400, 
-            detail="Survey already submitted. Cannot modify responses."
+            status_code=400,
+            detail="You have already submitted this survey. Cannot modify responses."
         )
     
     # Verify question exists
@@ -261,12 +266,17 @@ def submit_survey(
     
     if not survey:
         raise HTTPException(status_code=400, detail="No survey found")
-    
-    # Check if already submitted
-    if survey.status == "Submitted":
+
+    # Check if current user has already submitted
+    user_submission = db.query(models.UserSurveySubmission).filter(
+        models.UserSurveySubmission.survey_id == survey.id,
+        models.UserSurveySubmission.user_id == current_user.id
+    ).first()
+
+    if user_submission:
         raise HTTPException(
-            status_code=400, 
-            detail="Survey already submitted"
+            status_code=400,
+            detail="You have already submitted this survey"
         )
     
     # Validate all relevant questions are answered (filtered by user type)
@@ -294,12 +304,36 @@ def submit_survey(
             status_code=400,
             detail=f"Survey incomplete. {answered}/{total_questions} questions answered"
         )
-    
-    # Submit survey
-    survey.status = "Submitted"
-    survey.submitted_at = func.now()
+
+    # Create user submission record
+    user_submission = models.UserSurveySubmission(
+        survey_id=survey.id,
+        user_id=current_user.id,
+        submitted_at=func.now()
+    )
+    db.add(user_submission)
+
+    # Update survey status if this is the first submission
+    if survey.status == "Not Started":
+        survey.status = "In Progress"
+
+    # Check if all users from this customer have submitted
+    customer_users = db.query(models.User).filter(
+        models.User.customer_id == current_user.customer_id,
+        models.User.user_type.in_([models.UserType.CXO, models.UserType.PARTICIPANT]),
+        models.User.is_deleted == False
+    ).count()
+
+    submissions_count = db.query(models.UserSurveySubmission).filter(
+        models.UserSurveySubmission.survey_id == survey.id
+    ).count() + 1  # +1 for current submission
+
+    if submissions_count >= customer_users:
+        survey.status = "Submitted"
+        survey.submitted_at = func.now()
+
     db.commit()
-    
+
     return {"message": "Survey submitted successfully"}
 
 @router.get("/status")
@@ -326,14 +360,19 @@ def get_survey_status(
     
     if not survey:
         return {
-            "status": "Not Started", 
+            "status": "Not Started",
             "customer_code": customer.customer_code if customer else None
         }
-    
-    # Check if submitted
-    if survey.status == "Submitted":
+
+    # Check if current user has submitted
+    user_submission = db.query(models.UserSurveySubmission).filter(
+        models.UserSurveySubmission.survey_id == survey.id,
+        models.UserSurveySubmission.user_id == current_user.id
+    ).first()
+
+    if user_submission:
         return {
-            "status": "Submitted", 
+            "status": "Submitted",
             "customer_code": customer.customer_code if customer else None
         }
     

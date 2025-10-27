@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float, Enum as SQLEnum, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
@@ -96,16 +96,30 @@ class Question(Base):
 
 class Survey(Base):
     __tablename__ = "surveys"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False)
     status = Column(String(50), default="Not Started")
     submitted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     customer = relationship("Customer", back_populates="surveys")
     responses = relationship("SurveyResponse", back_populates="survey")
+
+class UserSurveySubmission(Base):
+    __tablename__ = "user_survey_submissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    survey_id = Column(Integer, ForeignKey("surveys.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    submitted_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Ensure one submission per user per survey
+    __table_args__ = (
+        UniqueConstraint('survey_id', 'user_id', name='uq_survey_user'),
+    )
 
 class SurveyResponse(Base):
     __tablename__ = "survey_responses"
