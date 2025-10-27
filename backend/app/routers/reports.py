@@ -156,19 +156,18 @@ async def get_dimension_report(
             ).first()
 
         if llm_config and llm_config.status == "Success":
-            # FIXED: Pass model_name from config
             llm_response = await LLMService.generate_dimension_summary(
-                llm_config.api_url,
-                llm_config.api_key,
+                llm_config,
                 dimension,
-                questions_for_llm,
-                llm_config.model_name or "default"  # Use configured model_name
+                questions_for_llm
             )
 
             if llm_response.get("success"):
                 llm_summary = llm_response.get("final_summary")
             else:
                 llm_error = llm_response.get("error")
+        else:
+            llm_error = "LLM not configured or test not successful"
     except Exception as e:
         llm_error = str(e)
     
@@ -295,11 +294,9 @@ async def get_overall_report(
             
             if llm_config and llm_config.status == "Success":
                 llm_response = await LLMService.generate_dimension_summary(
-                    llm_config.api_url,
-                    llm_config.api_key,
+                    llm_config,
                     dimension,
-                    questions_for_llm,
-                    llm_config.model_name or "default"
+                    questions_for_llm
                 )
 
                 if llm_response.get("success"):
@@ -336,10 +333,8 @@ async def get_overall_report(
         
         if orchestrate_llm and orchestrate_llm.status == "Success":
             llm_response = await LLMService.generate_overall_summary(
-                orchestrate_llm.api_url,
-                orchestrate_llm.api_key,
-                dimension_summaries,
-                orchestrate_llm.model_name or "default"
+                orchestrate_llm,
+                dimension_summaries
             )
 
             if llm_response.get("success"):
