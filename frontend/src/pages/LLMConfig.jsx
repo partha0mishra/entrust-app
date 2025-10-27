@@ -14,6 +14,12 @@ const LLM_PURPOSES = [
   'Data Ethics & Bias'
 ];
 
+const PROVIDER_TYPES = [
+  { value: 'local', label: 'Local LLM (LM Studio, Ollama, etc.)' },
+  { value: 'bedrock', label: 'AWS Bedrock' },
+  { value: 'azure', label: 'Azure OpenAI' }
+];
+
 export default function LLMConfig() {
   const [configs, setConfigs] = useState([]);
   const [formData, setFormData] = useState({});
@@ -36,9 +42,18 @@ export default function LLMConfig() {
       LLM_PURPOSES.forEach(purpose => {
         initialFormData[purpose] = configMap[purpose] || {
           purpose,
+          provider_type: 'local',
+          model_name: 'default',
           api_url: '',
           api_key: '',
-          model_name: 'default',  // ADD THIS
+          aws_region: '',
+          aws_access_key_id: '',
+          aws_secret_access_key: '',
+          aws_model_id: '',
+          azure_endpoint: '',
+          azure_api_key: '',
+          azure_deployment_name: '',
+          azure_api_version: '2024-02-15-preview',
           status: 'Not Tested'
         };
       });
@@ -58,10 +73,27 @@ export default function LLMConfig() {
     }));
   };
 
+  const validateConfig = (config) => {
+    if (config.provider_type === 'local') {
+      if (!config.api_url) return 'Please enter API URL';
+    } else if (config.provider_type === 'bedrock') {
+      if (!config.aws_region) return 'Please enter AWS Region';
+      if (!config.aws_access_key_id) return 'Please enter AWS Access Key ID';
+      if (!config.aws_secret_access_key) return 'Please enter AWS Secret Access Key';
+      if (!config.aws_model_id) return 'Please enter AWS Model ID';
+    } else if (config.provider_type === 'azure') {
+      if (!config.azure_endpoint) return 'Please enter Azure Endpoint';
+      if (!config.azure_api_key) return 'Please enter Azure API Key';
+      if (!config.azure_deployment_name) return 'Please enter Azure Deployment Name';
+    }
+    return null;
+  };
+
   const handleTest = async (purpose) => {
     const config = formData[purpose];
-    if (!config.api_url) {
-      alert('Please enter API URL first');
+    const validationError = validateConfig(config);
+    if (validationError) {
+      alert(validationError);
       return;
     }
 
@@ -69,14 +101,9 @@ export default function LLMConfig() {
 
     try {
       let configId = config.id;
-      
+
       if (!configId) {
-        const saveResponse = await llmAPI.createOrUpdate({
-          purpose: config.purpose,
-          api_url: config.api_url,
-          api_key: config.api_key || null,
-          model_name: config.model_name || 'default'  // ADD THIS
-        });
+        const saveResponse = await llmAPI.createOrUpdate(config);
         configId = saveResponse.data.id;
       }
 
@@ -108,18 +135,14 @@ export default function LLMConfig() {
 
   const handleSave = async (purpose) => {
     const config = formData[purpose];
-    if (!config.api_url) {
-      alert('Please enter API URL');
+    const validationError = validateConfig(config);
+    if (validationError) {
+      alert(validationError);
       return;
     }
 
     try {
-      const response = await llmAPI.createOrUpdate({
-        purpose: config.purpose,
-        api_url: config.api_url,
-        api_key: config.api_key || null,
-        model_name: config.model_name || 'default'  // ADD THIS
-      });
+      const response = await llmAPI.createOrUpdate(config);
 
       setFormData(prev => ({
         ...prev,
@@ -135,93 +158,198 @@ export default function LLMConfig() {
     }
   };
 
+  const renderProviderFields = (purpose, config) => {
+    const providerType = config?.provider_type || 'local';
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        {providerType === 'local' && (
+          <>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">API URL *</label>
+              <input
+                type="text"
+                value={config?.api_url || ''}
+                onChange={(e) => handleChange(purpose, 'api_url', e.target.value)}
+                placeholder="http://localhost:1234/v1/chat/completions"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Model Name</label>
+              <input
+                type="text"
+                value={config?.model_name || 'default'}
+                onChange={(e) => handleChange(purpose, 'model_name', e.target.value)}
+                placeholder="default"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">API Key (Optional)</label>
+              <input
+                type="password"
+                value={config?.api_key || ''}
+                onChange={(e) => handleChange(purpose, 'api_key', e.target.value)}
+                placeholder="Optional"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
+              />
+            </div>
+          </>
+        )}
+
+        {providerType === 'bedrock' && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">AWS Region *</label>
+              <input
+                type="text"
+                value={config?.aws_region || ''}
+                onChange={(e) => handleChange(purpose, 'aws_region', e.target.value)}
+                placeholder="us-east-1"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Model ID *</label>
+              <input
+                type="text"
+                value={config?.aws_model_id || ''}
+                onChange={(e) => handleChange(purpose, 'aws_model_id', e.target.value)}
+                placeholder="anthropic.claude-v2"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">AWS Access Key ID *</label>
+              <input
+                type="password"
+                value={config?.aws_access_key_id || ''}
+                onChange={(e) => handleChange(purpose, 'aws_access_key_id', e.target.value)}
+                placeholder="AKIAIOSFODNN7EXAMPLE"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">AWS Secret Access Key *</label>
+              <input
+                type="password"
+                value={config?.aws_secret_access_key || ''}
+                onChange={(e) => handleChange(purpose, 'aws_secret_access_key', e.target.value)}
+                placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
+              />
+            </div>
+          </>
+        )}
+
+        {providerType === 'azure' && (
+          <>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Azure Endpoint *</label>
+              <input
+                type="text"
+                value={config?.azure_endpoint || ''}
+                onChange={(e) => handleChange(purpose, 'azure_endpoint', e.target.value)}
+                placeholder="https://your-resource.openai.azure.com"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Deployment Name *</label>
+              <input
+                type="text"
+                value={config?.azure_deployment_name || ''}
+                onChange={(e) => handleChange(purpose, 'azure_deployment_name', e.target.value)}
+                placeholder="my-gpt-4-deployment"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">API Key *</label>
+              <input
+                type="password"
+                value={config?.azure_api_key || ''}
+                onChange={(e) => handleChange(purpose, 'azure_api_key', e.target.value)}
+                placeholder="Your Azure API Key"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">API Version</label>
+              <input
+                type="text"
+                value={config?.azure_api_version || '2024-02-15-preview'}
+                onChange={(e) => handleChange(purpose, 'azure_api_version', e.target.value)}
+                placeholder="2024-02-15-preview"
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
+              />
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">LLM Configuration</h1>
-      
+
       <div className="bg-blue-50 p-4 rounded mb-6">
         <p className="text-sm text-blue-900">
-          Configure LLM endpoints for generating summaries and suggestions in reports.
-          Use OpenAI-compatible API format (e.g., LM Studio local endpoints).
+          Configure LLM providers for generating summaries and suggestions in reports.
+          Support for Local LLMs (LM Studio, Ollama), AWS Bedrock, and Azure OpenAI.
         </p>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Purpose</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">API URL</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Model Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">API Key</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Test</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Save</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {LLM_PURPOSES.map(purpose => (
-              <tr key={purpose}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  {purpose}
-                </td>
-                <td className="px-6 py-4">
-                  <input
-                    type="text"
-                    value={formData[purpose]?.api_url || ''}
-                    onChange={(e) => handleChange(purpose, 'api_url', e.target.value)}
-                    placeholder="http://localhost:1234/v1/chat/completions"
-                    className="w-full px-3 py-1 text-sm border rounded focus:ring-2 focus:ring-encora-green"
-                  />
-                </td>
-                <td className="px-6 py-4">
-                  <input
-                    type="text"
-                    value={formData[purpose]?.model_name || 'default'}
-                    onChange={(e) => handleChange(purpose, 'model_name', e.target.value)}
-                    placeholder="default"
-                    className="w-full px-3 py-1 text-sm border rounded focus:ring-2 focus:ring-encora-green"
-                  />
-                </td>
-                <td className="px-6 py-4">
-                  <input
-                    type="password"
-                    value={formData[purpose]?.api_key || ''}
-                    onChange={(e) => handleChange(purpose, 'api_key', e.target.value)}
-                    placeholder="Optional"
-                    className="w-full px-3 py-1 text-sm border rounded focus:ring-2 focus:ring-encora-green"
-                  />
-                </td>
-                <td className="px-6 py-4">
-                  <button
-                    onClick={() => handleTest(purpose)}
-                    disabled={testing[purpose]}
-                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
-                  >
-                    {testing[purpose] ? 'Testing...' : 'Test'}
-                  </button>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <span className={`px-2 py-1 rounded text-xs ${
-                    formData[purpose]?.status === 'Success' ? 'bg-green-100 text-green-800' :
-                    formData[purpose]?.status === 'Failed' ? 'bg-red-100 text-red-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {formData[purpose]?.status || 'Not Tested'}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <button
-                    onClick={() => handleSave(purpose)}
-                    className="px-3 py-1 text-sm bg-encora-green text-white rounded hover:bg-green-600"
-                  >
-                    Save
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="space-y-6">
+        {LLM_PURPOSES.map(purpose => (
+          <div key={purpose} className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">{purpose}</h3>
+              <span className={`px-3 py-1 rounded text-sm font-medium ${
+                formData[purpose]?.status === 'Success' ? 'bg-green-100 text-green-800' :
+                formData[purpose]?.status === 'Failed' ? 'bg-red-100 text-red-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {formData[purpose]?.status || 'Not Tested'}
+              </span>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Provider Type</label>
+              <select
+                value={formData[purpose]?.provider_type || 'local'}
+                onChange={(e) => handleChange(purpose, 'provider_type', e.target.value)}
+                className="w-full md:w-1/2 px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
+              >
+                {PROVIDER_TYPES.map(provider => (
+                  <option key={provider.value} value={provider.value}>
+                    {provider.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {renderProviderFields(purpose, formData[purpose])}
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => handleTest(purpose)}
+                disabled={testing[purpose]}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+              >
+                {testing[purpose] ? 'Testing...' : 'Test Connection'}
+              </button>
+              <button
+                onClick={() => handleSave(purpose)}
+                className="px-4 py-2 bg-encora-green text-white rounded hover:bg-green-600"
+              >
+                Save Configuration
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

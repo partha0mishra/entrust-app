@@ -63,15 +63,10 @@ async def test_llm_config(
         raise HTTPException(status_code=404, detail="LLM config not found")
     
     logger.info(f"Config found: id={config.id}, purpose={config.purpose}")
-    logger.info(f"API URL from DB: '{config.api_url}'")
+    logger.info(f"Provider Type: {config.provider_type}")
     logger.info(f"Model Name from DB: '{config.model_name}'")
-    logger.info(f"API Key from DB: {'SET' if config.api_key else 'NOT SET'}")
-    
-    result = await LLMService.test_llm_connection(
-        config.api_url, 
-        config.api_key,
-        config.model_name  # PASS MODEL NAME
-    )
+
+    result = await LLMService.test_llm_connection(config)
     logger.info(f"Test result: {result}")
     
     config.status = result["status"]

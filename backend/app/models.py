@@ -45,15 +45,38 @@ class User(Base):
 
 # ... rest of the models remain the same (LLMConfig, Question, Survey, SurveyResponse)
 
+class LLMProviderType(str, enum.Enum):
+    LOCAL = "local"
+    BEDROCK = "bedrock"
+    AZURE = "azure"
+
 class LLMConfig(Base):
     __tablename__ = "llm_configs"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     purpose = Column(String(100), unique=True, nullable=False)
-    api_url = Column(String(500), nullable=False)
-    api_key = Column(String(500))
-    model_name = Column(String(100), default="default")  # ADD THIS LINE
+    provider_type = Column(SQLEnum(LLMProviderType), nullable=False, default=LLMProviderType.LOCAL)
+
+    # Common fields
+    model_name = Column(String(100), default="default")
     status = Column(String(50), default="Not Tested")
+
+    # Local LLM fields
+    api_url = Column(String(500))  # For local LLMs (LM Studio, etc.)
+    api_key = Column(String(500))  # Optional for local
+
+    # AWS Bedrock fields
+    aws_region = Column(String(50))  # e.g., "us-east-1"
+    aws_access_key_id = Column(String(500))
+    aws_secret_access_key = Column(String(500))
+    aws_model_id = Column(String(200))  # e.g., "anthropic.claude-v2"
+
+    # Azure OpenAI fields
+    azure_endpoint = Column(String(500))  # Azure endpoint URL
+    azure_api_key = Column(String(500))
+    azure_deployment_name = Column(String(200))  # Azure deployment name
+    azure_api_version = Column(String(50), default="2024-02-15-preview")
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
