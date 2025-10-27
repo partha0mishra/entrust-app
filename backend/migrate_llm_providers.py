@@ -21,12 +21,17 @@ def migrate():
     engine = create_engine(DATABASE_URL)
 
     migrations = [
-        # Drop the enum type if it exists, then recreate it
+        # Drop the old provider_type column if it exists
+        """
+        ALTER TABLE llm_configs DROP COLUMN IF EXISTS provider_type;
+        """,
+
+        # Drop the enum type if it exists
         """
         DROP TYPE IF EXISTS llmprovidertype CASCADE;
         """,
 
-        # Create the enum type
+        # Create the enum type with lowercase values
         """
         CREATE TYPE llmprovidertype AS ENUM ('local', 'bedrock', 'azure');
         """,
@@ -34,7 +39,7 @@ def migrate():
         # Add provider_type column with default 'local'
         """
         ALTER TABLE llm_configs
-        ADD COLUMN IF NOT EXISTS provider_type llmprovidertype DEFAULT 'local'::llmprovidertype NOT NULL;
+        ADD COLUMN provider_type llmprovidertype DEFAULT 'local'::llmprovidertype NOT NULL;
         """,
 
         # Make api_url nullable (required only for local provider)
