@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Float, Enum as SQLEnum, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
@@ -45,15 +45,38 @@ class User(Base):
 
 # ... rest of the models remain the same (LLMConfig, Question, Survey, SurveyResponse)
 
+class LLMProviderType(str, enum.Enum):
+    LOCAL = "LOCAL"
+    BEDROCK = "BEDROCK"
+    AZURE = "AZURE"
+
 class LLMConfig(Base):
     __tablename__ = "llm_configs"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     purpose = Column(String(100), unique=True, nullable=False)
-    api_url = Column(String(500), nullable=False)
-    api_key = Column(String(500))
-    model_name = Column(String(100), default="default")  # ADD THIS LINE
+    provider_type = Column(SQLEnum(LLMProviderType), nullable=False, default=LLMProviderType.LOCAL)
+
+    # Common fields
+    model_name = Column(String(100), default="default")
     status = Column(String(50), default="Not Tested")
+
+    # Local LLM fields
+    api_url = Column(String(500))  # For local LLMs (LM Studio, etc.)
+    api_key = Column(String(500))  # Optional for local
+
+    # AWS Bedrock fields
+    aws_region = Column(String(50))  # e.g., "us-east-1"
+    aws_access_key_id = Column(String(500))
+    aws_secret_access_key = Column(String(500))
+    aws_model_id = Column(String(200))  # e.g., "anthropic.claude-v2"
+
+    # Azure OpenAI fields
+    azure_endpoint = Column(String(500))  # Azure endpoint URL
+    azure_api_key = Column(String(500))
+    azure_deployment_name = Column(String(200))  # Azure deployment name
+    azure_api_version = Column(String(50), default="2024-02-15-preview")
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -73,16 +96,30 @@ class Question(Base):
 
 class Survey(Base):
     __tablename__ = "surveys"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False)
     status = Column(String(50), default="Not Started")
     submitted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     customer = relationship("Customer", back_populates="surveys")
     responses = relationship("SurveyResponse", back_populates="survey")
+
+class UserSurveySubmission(Base):
+    __tablename__ = "user_survey_submissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    survey_id = Column(Integer, ForeignKey("surveys.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    submitted_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Ensure one submission per user per survey
+    __table_args__ = (
+        UniqueConstraint('survey_id', 'user_id', name='uq_survey_user'),
+    )
 
 class SurveyResponse(Base):
     __tablename__ = "survey_responses"

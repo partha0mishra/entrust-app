@@ -106,7 +106,20 @@ export default function SurveySection() {
 
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">{dimension}</h1>
-        <p className="text-gray-600 mt-2">{questions.length} questions</p>
+        <div className="flex items-center gap-3 mt-2">
+          <p className="text-gray-600">{questions.length} questions</p>
+          <div className="flex gap-2">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              Category
+            </span>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+              Process
+            </span>
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              Lifecycle Stage
+            </span>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -123,6 +136,25 @@ export default function SurveySection() {
                     <h3 className="text-lg font-semibold text-gray-900 mt-1">
                       {question.text}
                     </h3>
+
+                    {/* Tags for Category, Process, and Lifecycle Stage */}
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {question.category && (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {question.category}
+                        </span>
+                      )}
+                      {question.process && (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          {question.process}
+                        </span>
+                      )}
+                      {question.lifecycle_stage && (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {question.lifecycle_stage}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {saving[question.id] && (
                     <span className="text-sm text-blue-600">Saving...</span>

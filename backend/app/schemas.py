@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
-from .models import UserType
+from .models import UserType, LLMProviderType
 
 class CustomerBase(BaseModel):
     name: str
@@ -56,9 +56,24 @@ class Token(BaseModel):
 
 class LLMConfigBase(BaseModel):
     purpose: str
-    api_url: str
+    provider_type: LLMProviderType = LLMProviderType.LOCAL
+    model_name: Optional[str] = "default"
+
+    # Local LLM fields
+    api_url: Optional[str] = None
     api_key: Optional[str] = None
-    model_name: Optional[str] = "default"  # ADD THIS LINE
+
+    # AWS Bedrock fields
+    aws_region: Optional[str] = None
+    aws_access_key_id: Optional[str] = None
+    aws_secret_access_key: Optional[str] = None
+    aws_model_id: Optional[str] = None
+
+    # Azure OpenAI fields
+    azure_endpoint: Optional[str] = None
+    azure_api_key: Optional[str] = None
+    azure_deployment_name: Optional[str] = None
+    azure_api_version: Optional[str] = "2024-02-15-preview"
 
 class LLMConfigCreate(LLMConfigBase):
     pass
@@ -70,7 +85,7 @@ class LLMConfig(LLMConfigBase):
     id: int
     status: str
     created_at: datetime
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 class QuestionBase(BaseModel):
