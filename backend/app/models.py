@@ -67,6 +67,8 @@ class Question(Base):
     dimension = Column(String(255), nullable=False)
     question_type = Column(String(50))
     guidance = Column(Text)
+    process = Column(String(100))
+    lifecycle_stage = Column(String(100))
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Survey(Base):

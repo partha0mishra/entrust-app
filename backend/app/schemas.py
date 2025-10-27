@@ -80,6 +80,8 @@ class QuestionBase(BaseModel):
     dimension: str
     question_type: Optional[str]
     guidance: Optional[str]
+    process: Optional[str]
+    lifecycle_stage: Optional[str]
 
 class Question(QuestionBase):
     id: int

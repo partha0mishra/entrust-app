@@ -499,6 +499,9 @@ export default function Reports() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                        Q#
+                      </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Question
                       </th>
@@ -519,6 +522,9 @@ export default function Reports() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {report.questions?.map((q, index) => (
                       <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 text-sm font-semibold text-gray-700 text-center">
+                          {index + 1}
+                        </td>
                         <td className="px-6 py-4 text-sm text-gray-900">
                           {q.question}
                         </td>

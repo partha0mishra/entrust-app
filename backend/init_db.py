@@ -53,7 +53,9 @@ def init_database():
                         category=q.get('category'),
                         dimension=q['dimension'],
                         question_type=q.get('question_type'),
-                        guidance=q.get('guidance')
+                        guidance=q.get('guidance'),
+                        process=q.get('process'),
+                        lifecycle_stage=q.get('lifecycle_stage')
                     )
                     db.add(question)
                 
