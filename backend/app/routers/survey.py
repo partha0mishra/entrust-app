@@ -12,8 +12,14 @@ def get_questions(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.require_customer_user)
 ):
-    """Get all survey questions. (Customer users only)"""
-    questions = db.query(models.Question).all()
+    """Get all survey questions. CXO users see only CXO questions, others see all. (Customer users only)"""
+    query = db.query(models.Question)
+
+    # CXO users only see CXO questions
+    if current_user.user_type == models.UserType.CXO:
+        query = query.filter(models.Question.question_type == 'CXO')
+
+    questions = query.all()
     return questions
 
 @router.get("/dimensions")
@@ -56,20 +62,30 @@ def get_survey_progress(
     progress = []
     
     for (dimension,) in dimensions:
-        # Count total questions in this dimension
-        total_questions = db.query(models.Question).filter(
+        # Count total questions in this dimension (filtered by user type)
+        question_query = db.query(models.Question).filter(
             models.Question.dimension == dimension
-        ).count()
-        
+        )
+        # CXO users only see CXO questions
+        if current_user.user_type == models.UserType.CXO:
+            question_query = question_query.filter(models.Question.question_type == 'CXO')
+
+        total_questions = question_query.count()
+
         # Count answered questions in this dimension for the CURRENT USER
-        answered_questions = db.query(models.SurveyResponse).join(
+        answer_query = db.query(models.SurveyResponse).join(
             models.Question
         ).filter(
             models.SurveyResponse.survey_id == survey.id,
             models.SurveyResponse.user_id == current_user.id,
             models.Question.dimension == dimension,
             models.SurveyResponse.score.isnot(None)
-        ).distinct(models.SurveyResponse.question_id).count()
+        )
+        # CXO users only count CXO questions
+        if current_user.user_type == models.UserType.CXO:
+            answer_query = answer_query.filter(models.Question.question_type == 'CXO')
+
+        answered_questions = answer_query.distinct(models.SurveyResponse.question_id).count()
         
         # Determine status
         if answered_questions == 0:
@@ -94,10 +110,16 @@ def get_questions_by_dimension(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.require_customer_user)
 ):
-    """Get all questions for a specific dimension. (Customer users only)"""
-    questions = db.query(models.Question).filter(
+    """Get all questions for a specific dimension. CXO users see only CXO questions, others see all. (Customer users only)"""
+    query = db.query(models.Question).filter(
         models.Question.dimension == dimension
-    ).all()
+    )
+
+    # CXO users only see CXO questions
+    if current_user.user_type == models.UserType.CXO:
+        query = query.filter(models.Question.question_type == 'CXO')
+
+    questions = query.all()
     return questions
 
 @router.get("/responses/{dimension}")
@@ -118,11 +140,16 @@ def get_user_responses_for_dimension(
     if not survey:
         return {}
     
-    # Get all questions in this dimension
-    questions = db.query(models.Question).filter(
+    # Get all questions in this dimension (filtered by user type)
+    question_query = db.query(models.Question).filter(
         models.Question.dimension == dimension
-    ).all()
-    
+    )
+    # CXO users only see CXO questions
+    if current_user.user_type == models.UserType.CXO:
+        question_query = question_query.filter(models.Question.question_type == 'CXO')
+
+    questions = question_query.all()
+
     question_ids = [q.id for q in questions]
     
     # Get responses for this user
@@ -242,13 +269,26 @@ def submit_survey(
             detail="Survey already submitted"
         )
     
-    # Validate all questions are answered
-    total_questions = db.query(models.Question).count()
-    answered = db.query(models.SurveyResponse).filter(
+    # Validate all relevant questions are answered (filtered by user type)
+    question_query = db.query(models.Question)
+    # CXO users only need to answer CXO questions
+    if current_user.user_type == models.UserType.CXO:
+        question_query = question_query.filter(models.Question.question_type == 'CXO')
+
+    total_questions = question_query.count()
+
+    # Count answered questions (filtered by user type)
+    answer_query = db.query(models.SurveyResponse).join(models.Question).filter(
         models.SurveyResponse.survey_id == survey.id,
+        models.SurveyResponse.user_id == current_user.id,
         models.SurveyResponse.score.isnot(None)
-    ).distinct(models.SurveyResponse.question_id).count()
-    
+    )
+    # CXO users only count CXO questions
+    if current_user.user_type == models.UserType.CXO:
+        answer_query = answer_query.filter(models.Question.question_type == 'CXO')
+
+    answered = answer_query.distinct(models.SurveyResponse.question_id).count()
+
     if answered < total_questions:
         raise HTTPException(
             status_code=400,
@@ -297,13 +337,25 @@ def get_survey_status(
             "customer_code": customer.customer_code if customer else None
         }
     
-    # Calculate progress for the CURRENT USER
-    total_questions = db.query(models.Question).count()
-    answered = db.query(models.SurveyResponse).filter(
+    # Calculate progress for the CURRENT USER (filtered by user type)
+    question_query = db.query(models.Question)
+    # CXO users only see CXO questions
+    if current_user.user_type == models.UserType.CXO:
+        question_query = question_query.filter(models.Question.question_type == 'CXO')
+
+    total_questions = question_query.count()
+
+    # Count answered questions (filtered by user type)
+    answer_query = db.query(models.SurveyResponse).join(models.Question).filter(
         models.SurveyResponse.survey_id == survey.id,
         models.SurveyResponse.user_id == current_user.id,
         models.SurveyResponse.score.isnot(None)
-    ).distinct(models.SurveyResponse.question_id).count()
+    )
+    # CXO users only count CXO questions
+    if current_user.user_type == models.UserType.CXO:
+        answer_query = answer_query.filter(models.Question.question_type == 'CXO')
+
+    answered = answer_query.distinct(models.SurveyResponse.question_id).count()
     
     if answered == 0:
         status = "Not Started"
