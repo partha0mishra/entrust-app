@@ -123,6 +123,25 @@ export default function SurveySection() {
                     <h3 className="text-lg font-semibold text-gray-900 mt-1">
                       {question.text}
                     </h3>
+
+                    {/* Tags for Category, Process, and Lifecycle Stage */}
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {question.category && (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {question.category}
+                        </span>
+                      )}
+                      {question.process && (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          {question.process}
+                        </span>
+                      )}
+                      {question.lifecycle_stage && (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {question.lifecycle_stage}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {saving[question.id] && (
                     <span className="text-sm text-blue-600">Saving...</span>
