@@ -46,9 +46,9 @@ class User(Base):
 # ... rest of the models remain the same (LLMConfig, Question, Survey, SurveyResponse)
 
 class LLMProviderType(str, enum.Enum):
-    LOCAL = "local"
-    BEDROCK = "bedrock"
-    AZURE = "azure"
+    LOCAL = "LOCAL"
+    BEDROCK = "BEDROCK"
+    AZURE = "AZURE"
 
 class LLMConfig(Base):
     __tablename__ = "llm_configs"

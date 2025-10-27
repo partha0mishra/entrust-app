@@ -31,15 +31,15 @@ def migrate():
         DROP TYPE IF EXISTS llmprovidertype CASCADE;
         """,
 
-        # Create the enum type with lowercase values
+        # Create the enum type with uppercase values to match existing database
         """
-        CREATE TYPE llmprovidertype AS ENUM ('local', 'bedrock', 'azure');
+        CREATE TYPE llmprovidertype AS ENUM ('LOCAL', 'BEDROCK', 'AZURE');
         """,
 
-        # Add provider_type column with default 'local'
+        # Add provider_type column with default 'LOCAL'
         """
         ALTER TABLE llm_configs
-        ADD COLUMN provider_type llmprovidertype DEFAULT 'local'::llmprovidertype NOT NULL;
+        ADD COLUMN provider_type llmprovidertype DEFAULT 'LOCAL'::llmprovidertype NOT NULL;
         """,
 
         # Make api_url nullable (required only for local provider)

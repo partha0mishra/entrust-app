@@ -15,9 +15,9 @@ const LLM_PURPOSES = [
 ];
 
 const PROVIDER_TYPES = [
-  { value: 'local', label: 'Local LLM (LM Studio, Ollama, etc.)' },
-  { value: 'bedrock', label: 'AWS Bedrock' },
-  { value: 'azure', label: 'Azure OpenAI' }
+  { value: 'LOCAL', label: 'Local LLM (LM Studio, Ollama, etc.)' },
+  { value: 'BEDROCK', label: 'AWS Bedrock' },
+  { value: 'AZURE', label: 'Azure OpenAI' }
 ];
 
 export default function LLMConfig() {
@@ -42,7 +42,7 @@ export default function LLMConfig() {
       LLM_PURPOSES.forEach(purpose => {
         initialFormData[purpose] = configMap[purpose] || {
           purpose,
-          provider_type: 'local',
+          provider_type: 'LOCAL',
           model_name: 'default',
           api_url: '',
           api_key: '',
@@ -74,14 +74,14 @@ export default function LLMConfig() {
   };
 
   const validateConfig = (config) => {
-    if (config.provider_type === 'local') {
+    if (config.provider_type === 'LOCAL') {
       if (!config.api_url) return 'Please enter API URL';
-    } else if (config.provider_type === 'bedrock') {
+    } else if (config.provider_type === 'BEDROCK') {
       if (!config.aws_region) return 'Please enter AWS Region';
       if (!config.aws_access_key_id) return 'Please enter AWS Access Key ID';
       if (!config.aws_secret_access_key) return 'Please enter AWS Secret Access Key';
       if (!config.aws_model_id) return 'Please enter AWS Model ID';
-    } else if (config.provider_type === 'azure') {
+    } else if (config.provider_type === 'AZURE') {
       if (!config.azure_endpoint) return 'Please enter Azure Endpoint';
       if (!config.azure_api_key) return 'Please enter Azure API Key';
       if (!config.azure_deployment_name) return 'Please enter Azure Deployment Name';
@@ -159,11 +159,11 @@ export default function LLMConfig() {
   };
 
   const renderProviderFields = (purpose, config) => {
-    const providerType = config?.provider_type || 'local';
+    const providerType = config?.provider_type || 'LOCAL';
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-        {providerType === 'local' && (
+        {providerType === 'LOCAL' && (
           <>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">API URL *</label>
@@ -198,7 +198,7 @@ export default function LLMConfig() {
           </>
         )}
 
-        {providerType === 'bedrock' && (
+        {providerType === 'BEDROCK' && (
           <>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">AWS Region *</label>
@@ -243,7 +243,7 @@ export default function LLMConfig() {
           </>
         )}
 
-        {providerType === 'azure' && (
+        {providerType === 'AZURE' && (
           <>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Azure Endpoint *</label>
@@ -319,7 +319,7 @@ export default function LLMConfig() {
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">Provider Type</label>
               <select
-                value={formData[purpose]?.provider_type || 'local'}
+                value={formData[purpose]?.provider_type || 'LOCAL'}
                 onChange={(e) => handleChange(purpose, 'provider_type', e.target.value)}
                 className="w-full md:w-1/2 px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
               >
