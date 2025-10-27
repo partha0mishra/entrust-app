@@ -86,13 +86,7 @@ def get_survey_progress(
             answer_query = answer_query.filter(models.Question.question_type == 'CXO')
 
         answered_questions = answer_query.distinct(models.SurveyResponse.question_id).count()
-
-        # Get unique categories, processes, and lifecycle stages for this dimension
-        dimension_questions = question_query.all()
-        categories = list(set(q.category for q in dimension_questions if q.category))
-        processes = list(set(q.process for q in dimension_questions if q.process))
-        lifecycle_stages = list(set(q.lifecycle_stage for q in dimension_questions if q.lifecycle_stage))
-
+        
         # Determine status
         if answered_questions == 0:
             status = "Not Started"
@@ -100,15 +94,12 @@ def get_survey_progress(
             status = "Completed"
         else:
             status = f"In Progress {answered_questions}/{total_questions}"
-
+        
         progress.append({
             "dimension": dimension,
             "total_questions": total_questions,
             "answered_questions": answered_questions,
-            "status": status,
-            "categories": categories,
-            "processes": processes,
-            "lifecycle_stages": lifecycle_stages
+            "status": status
         })
     
     return progress

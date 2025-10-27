@@ -105,28 +105,6 @@ export default function SurveyDashboard() {
               {item.dimension}
             </h3>
             <div className="space-y-2">
-              <div className="flex justify-between items-start text-sm">
-                <span className="text-gray-600">
-                  {item.total_questions} questions
-                </span>
-                <div className="flex flex-wrap gap-1 justify-end ml-2">
-                  {item.categories && item.categories.map((category, idx) => (
-                    <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {category}
-                    </span>
-                  ))}
-                  {item.processes && item.processes.map((process, idx) => (
-                    <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                      {process}
-                    </span>
-                  ))}
-                  {item.lifecycle_stages && item.lifecycle_stages.map((stage, idx) => (
-                    <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      {stage}
-                    </span>
-                  ))}
-                </div>
-              </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Progress</span>
                 <span className="font-medium">

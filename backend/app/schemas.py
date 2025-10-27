@@ -137,6 +137,3 @@ class DimensionProgress(BaseModel):
     total_questions: int
     answered_questions: int
     status: str
-    categories: List[str] = []
-    processes: List[str] = []
-    lifecycle_stages: List[str] = []
