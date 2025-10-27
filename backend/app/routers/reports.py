@@ -144,28 +144,30 @@ async def get_dimension_report(
     # Generate LLM summary with model_name
     llm_summary = None
     llm_error = None
-    
+
     try:
         llm_config = db.query(models.LLMConfig).filter(
             models.LLMConfig.purpose == dimension
         ).first()
-        
+
         if not llm_config:
             llm_config = db.query(models.LLMConfig).filter(
                 models.LLMConfig.purpose == "Default"
             ).first()
-        
+
         if llm_config and llm_config.status == "Success":
             llm_response = await LLMService.generate_dimension_summary(
                 llm_config,
                 dimension,
                 questions_for_llm
             )
-            
+
             if llm_response.get("success"):
                 llm_summary = llm_response.get("final_summary")
             else:
                 llm_error = llm_response.get("error")
+        else:
+            llm_error = "LLM not configured or test not successful"
     except Exception as e:
         llm_error = str(e)
     
