@@ -55,58 +55,26 @@ class LLMService:
     
     @staticmethod
     async def _call_llm(
-        api_url: str,
-        api_key: Optional[str],
+        provider,
         messages: List[Dict],
-        max_tokens: int = 500,
-        model_name: str = "default"
+        max_tokens: int = 500
     ) -> str:
-        """Helper method to call LLM API with timeout and error handling"""
-        headers = {
-            "Content-Type": "application/json"
-        }
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
-
-        payload = {
-            "model": model_name,
-            "messages": messages,
-            "max_tokens": max_tokens
-        }
-
-        try:
-            async with httpx.AsyncClient(timeout=LLMService.LLM_TIMEOUT) as client:
-                response = await client.post(api_url, json=payload, headers=headers)
-                response.raise_for_status()
-                result = response.json()
-
-                # Extract content from response
-                content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-                if not content:
-                    raise Exception("No content in LLM response")
-
-                return content
-
-        except httpx.TimeoutException:
-            raise Exception(f"LLM request timed out after {LLMService.LLM_TIMEOUT} seconds")
-        except httpx.HTTPStatusError as e:
-            raise Exception(f"LLM API error: {e.response.status_code} - {e.response.text}")
-        except Exception as e:
-            raise Exception(f"LLM call failed: {str(e)}")
+        """Helper method to call LLM API using provider"""
+        return await provider.call_llm(messages, max_tokens)
     
     @staticmethod
     async def generate_dimension_summary(
-        api_url: str,
-        api_key: Optional[str],
+        config,
         dimension: str,
-        questions_data: List[Dict],
-        model_name: str = "default"
+        questions_data: List[Dict]
     ) -> Dict:
         """
         Generate dimension summary with chunking support
         Returns both partial summaries and final consolidated summary
         """
         try:
+            # Get the appropriate provider
+            provider = get_llm_provider(config)
 
             # Split questions into chunks
             chunks = LLMService._chunk_questions(
@@ -144,7 +112,7 @@ Questions and Responses:
                 ]
 
                 chunk_summary = await LLMService._call_llm(
-                    api_url, api_key, messages, max_tokens=800, model_name=model_name
+                    provider, messages, max_tokens=8196
                 )
                 
                 chunk_summaries.append({
@@ -174,7 +142,7 @@ Questions and Responses:
                 ]
 
                 final_summary = await LLMService._call_llm(
-                    api_url, api_key, messages, max_tokens=1000, model_name=model_name
+                    provider, messages, max_tokens=8196
                 )
             
             return {
@@ -194,15 +162,15 @@ Questions and Responses:
     
     @staticmethod
     async def generate_overall_summary(
-        api_url: str,
-        api_key: Optional[str],
-        dimension_summaries: Dict[str, str],
-        model_name: str = "default"
+        config,
+        dimension_summaries: Dict[str, str]
     ) -> Dict:
         """
         Generate overall summary from dimension summaries with chunking support
         """
         try:
+            # Get the appropriate provider
+            provider = get_llm_provider(config)
 
             # Prepare dimension summaries text
             all_summaries_text = ""
@@ -246,7 +214,7 @@ Questions and Responses:
                     ]
 
                     chunk_summary = await LLMService._call_llm(
-                        api_url, api_key, messages, max_tokens=800, model_name=model_name
+                        provider, messages, max_tokens=8196
                     )
                     chunk_summaries.append(chunk_summary)
                 
@@ -271,7 +239,7 @@ Use clear markdown formatting with headers, bullet points, and proper line break
                 ]
 
                 final_summary = await LLMService._call_llm(
-                    api_url, api_key, messages, max_tokens=1200, model_name=model_name
+                    provider, messages, max_tokens=8196
                 )
                 
                 return {
@@ -300,7 +268,7 @@ Use markdown formatting with clear headers and bullet points."""
                 ]
 
                 summary = await LLMService._call_llm(
-                    api_url, api_key, messages, max_tokens=1200, model_name=model_name
+                    provider, messages, max_tokens=8196
                 )
                 
                 return {

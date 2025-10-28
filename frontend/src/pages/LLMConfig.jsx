@@ -123,9 +123,13 @@ export default function LLMConfig() {
         }
       }));
 
+      const isSuccess = testResponse.data.status === 'Success';
       setStatusMessages(prev => ({
         ...prev,
-        [purpose]: { type: 'success', message: `Test ${testResponse.data.status}` }
+        [purpose]: {
+          type: isSuccess ? 'success' : 'error',
+          message: `Test ${testResponse.data.status}`
+        }
       }));
     } catch (error) {
       const errorMsg = 'Test Failed: ' + (error.response?.data?.detail || error.message);

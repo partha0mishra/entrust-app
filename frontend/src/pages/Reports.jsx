@@ -166,30 +166,35 @@ export default function Reports() {
         backgroundColor: '#ffffff'
       });
 
-      // Calculate PDF dimensions
-      const imgWidth = 210; // A4 width in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      const pageHeight = 297; // A4 height in mm
-      
       const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10; // 10mm margin
+
+      // Calculate PDF dimensions
+      const imgWidth = pdfWidth - margin * 2;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pageHeight = pdfHeight - margin * 2;
+      
       let heightLeft = imgHeight;
-      let position = 0;
+      let position = -margin; // Start position for the first page
 
       // Add image to PDF (handle multiple pages if needed)
       const imgData = canvas.toDataURL('image/png');
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
       while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
+        position -= pdfHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
 
       // Save PDF
-      const safeDimension = selectedDimension.replace(/[^a-zA-Z0-9]/g, '_');
-      const filename = `${customerCode}_${safeDimension}_Report.pdf`;
+      const safeDimension = selectedDimension ? selectedDimension.replace(/[^a-zA-Z0-9]/g, '_') : 'Report';
+      const customerPrefix = customerCode ? `${customerCode}_` : '';
+      const filename = `${customerPrefix}${safeDimension}_Report.pdf`;
       pdf.save(filename);
 
       // Cleanup
