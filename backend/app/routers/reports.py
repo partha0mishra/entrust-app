@@ -145,31 +145,49 @@ async def get_dimension_report(
     llm_summary = None
     llm_error = None
 
+    # Debug logging
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Dimension report for: {dimension}, customer_id: {customer_id}")
+    logger.info(f"Questions for LLM: {len(questions_for_llm)}")
+
     try:
         llm_config = db.query(models.LLMConfig).filter(
             models.LLMConfig.purpose == dimension
         ).first()
 
+        logger.info(f"LLM config for dimension '{dimension}': {llm_config}")
+
         if not llm_config:
             llm_config = db.query(models.LLMConfig).filter(
                 models.LLMConfig.purpose == "Default"
             ).first()
+            logger.info(f"Using Default LLM config: {llm_config}")
+
+        if llm_config:
+            logger.info(f"LLM config found - Status: {llm_config.status}, Purpose: {llm_config.purpose}, Provider: {llm_config.provider_type}")
 
         if llm_config and llm_config.status == "Success":
+            logger.info(f"Calling LLMService.generate_dimension_summary for {dimension}")
             llm_response = await LLMService.generate_dimension_summary(
                 llm_config,
                 dimension,
                 questions_for_llm
             )
+            logger.info(f"LLM Response: success={llm_response.get('success')}, error={llm_response.get('error')}")
 
             if llm_response.get("success"):
                 llm_summary = llm_response.get("final_summary")
+                logger.info(f"LLM summary generated successfully, length: {len(llm_summary) if llm_summary else 0}")
             else:
                 llm_error = llm_response.get("error")
+                logger.error(f"LLM error: {llm_error}")
         else:
             llm_error = "LLM not configured or test not successful"
+            logger.warning(f"LLM not configured properly: config={llm_config}, status={llm_config.status if llm_config else 'None'}")
     except Exception as e:
         llm_error = str(e)
+        logger.error(f"Exception generating LLM summary: {e}", exc_info=True)
     
     return {
         "dimension": dimension,
