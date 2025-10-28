@@ -112,7 +112,7 @@ Questions and Responses:
                 ]
 
                 chunk_summary = await LLMService._call_llm(
-                    provider, messages, max_tokens=800
+                    provider, messages, max_tokens=8196
                 )
                 
                 chunk_summaries.append({
@@ -142,7 +142,7 @@ Questions and Responses:
                 ]
 
                 final_summary = await LLMService._call_llm(
-                    provider, messages, max_tokens=1000
+                    provider, messages, max_tokens=8196
                 )
             
             return {
@@ -214,7 +214,7 @@ Questions and Responses:
                     ]
 
                     chunk_summary = await LLMService._call_llm(
-                        provider, messages, max_tokens=800
+                        provider, messages, max_tokens=8196
                     )
                     chunk_summaries.append(chunk_summary)
                 
@@ -239,7 +239,7 @@ Use clear markdown formatting with headers, bullet points, and proper line break
                 ]
 
                 final_summary = await LLMService._call_llm(
-                    provider, messages, max_tokens=1200
+                    provider, messages, max_tokens=8196
                 )
                 
                 return {
@@ -268,7 +268,7 @@ Use markdown formatting with clear headers and bullet points."""
                 ]
 
                 summary = await LLMService._call_llm(
-                    provider, messages, max_tokens=1200
+                    provider, messages, max_tokens=8196
                 )
                 
                 return {
