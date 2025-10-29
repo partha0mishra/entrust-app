@@ -160,7 +160,7 @@ export default function Reports() {
 
       // Generate canvas from HTML
       const canvas = await html2canvas(tempContainer, {
-        scale: 2,
+        scale: 1.5, // Reduced scale to decrease file size
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff'
@@ -180,7 +180,7 @@ export default function Reports() {
       let position = -margin; // Start position for the first page
 
       // Add image to PDF (handle multiple pages if needed)
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 0.8); // Use JPEG with quality 0.8
       pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
@@ -471,8 +471,10 @@ export default function Reports() {
               {report.llm_summary && (
                 <div className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border-2 border-green-200">
                   <h3 className="text-lg font-bold mb-4 text-encora-green flex items-center">
+                    Strategic Insights, Observations & Action Plan
+                    <br/>
                     <span className="text-2xl mr-2">🤖</span>
-                    AI-Generated Summary & Suggestions
+                    Leveraging Augmented-Intelligence
                   </h3>
                   <div className="prose prose-sm max-w-none text-gray-800">
                     <ReactMarkdown 
