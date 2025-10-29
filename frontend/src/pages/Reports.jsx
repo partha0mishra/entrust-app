@@ -471,8 +471,10 @@ export default function Reports() {
               {report.llm_summary && (
                 <div className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border-2 border-green-200">
                   <h3 className="text-lg font-bold mb-4 text-encora-green flex items-center">
+                    Strategic Insights, Observations & Action Plan
+                    <br/>
                     <span className="text-2xl mr-2">🤖</span>
-                    AI-Generated Summary & Suggestions
+                    Leveraging Augmented-Intelligence
                   </h3>
                   <div className="prose prose-sm max-w-none text-gray-800">
                     <ReactMarkdown 

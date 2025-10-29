@@ -90,14 +90,25 @@ class LLMService:
 
 Questions and Responses:
 """
-                
-                system_prompt = "You are a data governance expert writing a professional report analyzing survey responses. Write in a formal, report-style format suitable for executive review. Use third-person perspective. DO NOT use first person (I, we) or ask questions. DO NOT include interactive elements like 'Let me analyze' or 'Would you like'. Provide clear, actionable insights in markdown format with proper headers, bullet points, and line breaks."
+
+                prompt_add_on = """## PROMPT ADD-ON
+You are a senior data governance consultant.
+**Step 1**: Compute stats (avg, % high/low) by Category, Process, Lifecycle Stage.
+**Step 2**: Draft tables.
+**Step 3**: Write observations with evidence.
+**Step 4**: Prioritize actions (Risk × Impact).
+**Step 5**: Self-score (1–10). Revise if <8.
+**Output ONLY the Markdown report** as requested below.
+
+---
+"""
+                system_prompt = prompt_add_on + "You are a data governance expert writing a professional report analyzing survey responses with scores on a 1-10 scale. Write in a formal, report-style format suitable for executive review. Use third-person perspective. DO NOT use first person (I, we) or ask questions. DO NOT include interactive elements like 'Let me analyze' or 'Would you like'. Provide clear, actionable insights in markdown format with proper headers, bullet points, and line breaks."
                 user_prompt_template = """
 Provide a concise summary of the current state and actionable suggestions for improvement.
 """
 
                 if dimension == "Data Privacy & Compliance":
-                    system_prompt = "You are a **senior data management consultant** specializing in Data Privacy & Compliance. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score, Comment, Category, Process, and Lifecycle Stage."
+                    system_prompt = prompt_add_on + "You are a **senior data management consultant** specializing in Data Privacy & Compliance. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score (on a 1-10 scale), Comment, Category, Process, and Lifecycle Stage."
                     user_prompt_template = """
 Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
 
@@ -131,7 +142,7 @@ Generate a report with the following sections based on the provided survey data.
 - Assign a mitigation urgency: Immediate / Short-term / Long-term
 """
                 elif dimension == "Data Ethics & Bias":
-                    system_prompt = "You are a **senior data management consultant** specializing in Data Ethics & Bias. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score, Comment, Category, Process, and Lifecycle Stage."
+                    system_prompt = prompt_add_on + "You are a **senior data management consultant** specializing in Data Ethics & Bias. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score (on a 1-10 scale), Comment, Category, Process, and Lifecycle Stage."
                     user_prompt_template = """
 Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
 
@@ -165,7 +176,7 @@ Generate a report with the following sections based on the provided survey data.
 - Assign a mitigation urgency: Immediate / Short-term / Long-term
 """
                 elif dimension == "Data Lineage & Traceability":
-                    system_prompt = "You are a **senior data management consultant** specializing in Data Lineage & Traceability. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score, Comment, Category, Process, and Lifecycle Stage."
+                    system_prompt = prompt_add_on + "You are a **senior data management consultant** specializing in Data Lineage & Traceability. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score (on a 1-10 scale), Comment, Category, Process, and Lifecycle Stage."
                     user_prompt_template = """
 Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
 
@@ -199,7 +210,7 @@ Generate a report with the following sections based on the provided survey data.
 - Assign a mitigation urgency: Immediate / Short-term / Long-term
 """
                 elif dimension == "Data Value & Lifecycle Management":
-                    system_prompt = "You are a **senior data management consultant** specializing in Data Value & Lifecycle Management. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score, Comment, Category, Process, and Lifecycle Stage."
+                    system_prompt = prompt_add_on + "You are a **senior data management consultant** specializing in Data Value & Lifecycle Management. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score (on a 1-10 scale), Comment, Category, Process, and Lifecycle Stage."
                     user_prompt_template = """
 Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
 
@@ -233,7 +244,7 @@ Generate a report with the following sections based on the provided survey data.
 - Assign a mitigation urgency: Immediate / Short-term / Long-term
 """
                 elif dimension == "Data Governance & Management":
-                    system_prompt = "You are a **senior data management consultant** specializing in Data Governance & Management. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score, Comment, Category, Process, and Lifecycle Stage."
+                    system_prompt = prompt_add_on + "You are a **senior data management consultant** specializing in Data Governance & Management. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score (on a 1-10 scale), Comment, Category, Process, and Lifecycle Stage."
                     user_prompt_template = """
 Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
 
@@ -267,7 +278,7 @@ Generate a report with the following sections based on the provided survey data.
 - Assign a mitigation urgency: Immediate / Short-term / Long-term
 """
                 elif dimension == "Data Security & Access":
-                    system_prompt = "You are a **senior data management consultant** specializing in Data Security & Access. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score, Comment, Category, Process, and Lifecycle Stage."
+                    system_prompt = prompt_add_on + "You are a **senior data management consultant** specializing in Data Security & Access. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score (on a 1-10 scale), Comment, Category, Process, and Lifecycle Stage."
                     user_prompt_template = """
 Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
 
@@ -301,7 +312,7 @@ Generate a report with the following sections based on the provided survey data.
 - Assign a mitigation urgency: Immediate / Short-term / Long-term
 """
                 elif dimension == "Metadata & Documentation":
-                    system_prompt = "You are a **senior data management consultant** specializing in Metadata & Documentation. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score, Comment, Category, Process, and Lifecycle Stage."
+                    system_prompt = prompt_add_on + "You are a **senior data management consultant** specializing in Metadata & Documentation. Your output must be a professionally crafted, consultative,executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score (on a 1-10 scale), Comment, Category, Process, and Lifecycle Stage."
                     user_prompt_template = """
 Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
 
@@ -473,6 +484,17 @@ Questions and Responses:
                 for i, summary in enumerate(chunk_summaries):
                     final_prompt += f"\n--- Analysis Part {i+1} ---\n{summary}\n"
                 
+                prompt_add_on = """## PROMPT ADD-ON
+You are a senior data governance consultant.
+**Step 1**: Compute stats (avg, % high/low) by Category, Process, Lifecycle Stage.
+**Step 2**: Draft tables.
+**Step 3**: Write observations with evidence.
+**Step 4**: Prioritize actions (Risk × Impact).
+**Step 5**: Self-score (1–10). Revise if <8.
+**Output ONLY the Markdown report** as requested below.
+
+---
+"""
                 final_prompt += """
 
 Generate a professionally crafted, consultative, executive-ready report with the following sections:
@@ -504,7 +526,7 @@ Generate a professionally crafted, consultative, executive-ready report with the
 """
                 
                 messages = [
-                    {"role": "system", "content": "You are a **senior data management consultant** tasked with synthesizing insights across multiple data management dimensions. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format."},
+                    {"role": "system", "content": prompt_add_on + "You are a **senior data management consultant** tasked with synthesizing insights across multiple data management dimensions. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. The analysis is based on survey responses with scores on a 1-10 scale."},
                     {"role": "user", "content": final_prompt}
                 ]
 
@@ -522,6 +544,17 @@ Generate a professionally crafted, consultative, executive-ready report with the
                 # Single call for smaller content
                 prompt = "Analyze the following dimension summaries and provide an overall organizational data governance assessment:\n\n"
                 prompt += all_summaries_text
+                prompt_add_on = """## PROMPT ADD-ON
+You are a senior data governance consultant.
+**Step 1**: Compute stats (avg, % high/low) by Category, Process, Lifecycle Stage.
+**Step 2**: Draft tables.
+**Step 3**: Write observations with evidence.
+**Step 4**: Prioritize actions (Risk × Impact).
+**Step 5**: Self-score (1–10). Revise if <8.
+**Output ONLY the Markdown report** as requested below.
+
+---
+"""
                 prompt += """
 
 Generate a professionally crafted, consultative, executive-ready report with the following sections:
@@ -553,7 +586,7 @@ Generate a professionally crafted, consultative, executive-ready report with the
 """
                 
                 messages = [
-                    {"role": "system", "content": "You are a **senior data management consultant** tasked with synthesizing insights across multiple data management dimensions. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format."},
+                    {"role": "system", "content": prompt_add_on + "You are a **senior data management consultant** tasked with synthesizing insights across multiple data management dimensions. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. The analysis is based on survey responses with scores on a 1-10 scale."},
                     {"role": "user", "content": prompt}
                 ]
 
