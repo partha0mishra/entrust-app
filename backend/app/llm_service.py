@@ -90,8 +90,262 @@ class LLMService:
 
 Questions and Responses:
 """
+                
+                system_prompt = "You are a data governance expert writing a professional report analyzing survey responses. Write in a formal, report-style format suitable for executive review. Use third-person perspective. DO NOT use first person (I, we) or ask questions. DO NOT include interactive elements like 'Let me analyze' or 'Would you like'. Provide clear, actionable insights in markdown format with proper headers, bullet points, and line breaks."
+                user_prompt_template = """
+Provide a concise summary of the current state and actionable suggestions for improvement.
+"""
+
+                if dimension == "Data Privacy & Compliance":
+                    system_prompt = "You are a **senior data management consultant** specializing in Data Privacy & Compliance. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score, Comment, Category, Process, and Lifecycle Stage."
+                    user_prompt_template = """
+Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
+
+# Data Privacy & Compliance – Survey Analysis Report
+
+### 1. Executive Summary
+- Average score & distribution
+- Top 3 themes from comments
+- Overall maturity level (High / Medium / Low)
+
+### 2. Performance by Category
+- Create a table with columns: **Category**, Avg Score, % High (8–10), % Low (1–4), Key Comment Themes
+- Highlight top-performing and at-risk categories
+
+### 3. Performance by Process
+- Create a table with columns: **Process**, Avg Score, Key Gaps, Recommended Tools/Methods
+
+### 4. Performance by Lifecycle Stage
+- Visualize maturity progression (e.g., strong in Monitoring, weak in Prevention)
+
+### 5. Strategic Observations
+- 3–5 bullet points with **consultative insights**
+- Link survey findings to industry frameworks (e.g., GDPR, CCPA, ISO 27701, NIST Privacy)
+
+### 6. Prioritized Action Plan
+- Create a table with columns: Priority, Action Item, Owner, Timeline, Expected Outcome
+- Provide at least one 'High' priority action.
+
+### 7. Risk Spotlight
+- Identify critical risks (e.g., non-compliance, breach exposure)
+- Assign a mitigation urgency: Immediate / Short-term / Long-term
+"""
+                elif dimension == "Data Ethics & Bias":
+                    system_prompt = "You are a **senior data management consultant** specializing in Data Ethics & Bias. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score, Comment, Category, Process, and Lifecycle Stage."
+                    user_prompt_template = """
+Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
+
+# Data Ethics & Bias – Survey Analysis Report
+
+### 1. Executive Summary
+- Average score & distribution
+- Top 3 themes from comments
+- Overall maturity level (High / Medium / Low)
+
+### 2. Performance by Category
+- Create a table with columns: **Category**, Avg Score, % High (8–10), % Low (1–4), Key Comment Themes
+- Highlight top-performing and at-risk categories
+
+### 3. Performance by Process
+- Create a table with columns: **Process**, Avg Score, Key Gaps, Recommended Tools/Methods
+
+### 4. Performance by Lifecycle Stage
+- Visualize maturity progression (e.g., strong in Monitoring, weak in Prevention)
+
+### 5. Strategic Observations
+- 3–5 bullet points with **consultative insights**
+- Link survey findings to industry frameworks (e.g., AI Ethics Guidelines, IEEE Ethically Aligned Design)
+
+### 6. Prioritized Action Plan
+- Create a table with columns: Priority, Action Item, Owner, Timeline, Expected Outcome
+- Provide at least one 'High' priority action.
+
+### 7. Risk Spotlight
+- Identify critical risks (e.g., bias amplification, ethical lapses)
+- Assign a mitigation urgency: Immediate / Short-term / Long-term
+"""
+                elif dimension == "Data Lineage & Traceability":
+                    system_prompt = "You are a **senior data management consultant** specializing in Data Lineage & Traceability. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score, Comment, Category, Process, and Lifecycle Stage."
+                    user_prompt_template = """
+Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
+
+# Data Lineage & Traceability – Survey Analysis Report
+
+### 1. Executive Summary
+- Average score & distribution
+- Top 3 themes from comments
+- Overall maturity level (High / Medium / Low)
+
+### 2. Performance by Category
+- Create a table with columns: **Category**, Avg Score, % High (8–10), % Low (1–4), Key Comment Themes
+- Highlight top-performing and at-risk categories
+
+### 3. Performance by Process
+- Create a table with columns: **Process**, Avg Score, Key Gaps, Recommended Tools/Methods
+
+### 4. Performance by Lifecycle Stage
+- Visualize maturity progression (e.g., strong in Monitoring, weak in Prevention)
+
+### 5. Strategic Observations
+- 3–5 bullet points with **consultative insights**
+- Link survey findings to industry frameworks (e.g., DAMA-DMBOK, data provenance standards)
+
+### 6. Prioritized Action Plan
+- Create a table with columns: Priority, Action Item, Owner, Timeline, Expected Outcome
+- Provide at least one 'High' priority action.
+
+### 7. Risk Spotlight
+- Identify critical risks (e.g., incomplete audit trails, traceability gaps)
+- Assign a mitigation urgency: Immediate / Short-term / Long-term
+"""
+                elif dimension == "Data Value & Lifecycle Management":
+                    system_prompt = "You are a **senior data management consultant** specializing in Data Value & Lifecycle Management. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score, Comment, Category, Process, and Lifecycle Stage."
+                    user_prompt_template = """
+Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
+
+# Data Value & Lifecycle Management – Survey Analysis Report
+
+### 1. Executive Summary
+- Average score & distribution
+- Top 3 themes from comments
+- Overall maturity level (High / Medium / Low)
+
+### 2. Performance by Category
+- Create a table with columns: **Category**, Avg Score, % High (8–10), % Low (1–4), Key Comment Themes
+- Highlight top-performing and at-risk categories
+
+### 3. Performance by Process
+- Create a table with columns: **Process**, Avg Score, Key Gaps, Recommended Tools/Methods
+
+### 4. Performance by Lifecycle Stage
+- Visualize maturity progression (e.g., strong in Monitoring, weak in Prevention)
+
+### 5. Strategic Observations
+- 3–5 bullet points with **consultative insights**
+- Link survey findings to industry frameworks (e.g., DAMA-DMBOK, data lifecycle models)
+
+### 6. Prioritized Action Plan
+- Create a table with columns: Priority, Action Item, Owner, Timeline, Expected Outcome
+- Provide at least one 'High' priority action.
+
+### 7. Risk Spotlight
+- Identify critical risks (e.g., data underutilization, poor retention)
+- Assign a mitigation urgency: Immediate / Short-term / Long-term
+"""
+                elif dimension == "Data Governance & Management":
+                    system_prompt = "You are a **senior data management consultant** specializing in Data Governance & Management. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score, Comment, Category, Process, and Lifecycle Stage."
+                    user_prompt_template = """
+Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
+
+# Data Governance & Management – Survey Analysis Report
+
+### 1. Executive Summary
+- Average score & distribution
+- Top 3 themes from comments
+- Overall maturity level (High / Medium / Low)
+
+### 2. Performance by Category
+- Create a table with columns: **Category**, Avg Score, % High (8–10), % Low (1–4), Key Comment Themes
+- Highlight top-performing and at-risk categories
+
+### 3. Performance by Process
+- Create a table with columns: **Process**, Avg Score, Key Gaps, Recommended Tools/Methods
+
+### 4. Performance by Lifecycle Stage
+- Visualize maturity progression (e.g., strong in Monitoring, weak in Prevention)
+
+### 5. Strategic Observations
+- 3–5 bullet points with **consultative insights**
+- Link survey findings to industry frameworks (e.g., DAMA-DMBOK, COBIT)
+
+### 6. Prioritized Action Plan
+- Create a table with columns: Priority, Action Item, Owner, Timeline, Expected Outcome
+- Provide at least one 'High' priority action.
+
+### 7. Risk Spotlight
+- Identify critical risks (e.g., inconsistent policies, lack of accountability)
+- Assign a mitigation urgency: Immediate / Short-term / Long-term
+"""
+                elif dimension == "Data Security & Access":
+                    system_prompt = "You are a **senior data management consultant** specializing in Data Security & Access. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score, Comment, Category, Process, and Lifecycle Stage."
+                    user_prompt_template = """
+Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
+
+# Data Security & Access – Survey Analysis Report
+
+### 1. Executive Summary
+- Average score & distribution
+- Top 3 themes from comments
+- Overall maturity level (High / Medium / Low)
+
+### 2. Performance by Category
+- Create a table with columns: **Category**, Avg Score, % High (8–10), % Low (1–4), Key Comment Themes
+- Highlight top-performing and at-risk categories
+
+### 3. Performance by Process
+- Create a table with columns: **Process**, Avg Score, Key Gaps, Recommended Tools/Methods
+
+### 4. Performance by Lifecycle Stage
+- Visualize maturity progression (e.g., strong in Monitoring, weak in Prevention)
+
+### 5. Strategic Observations
+- 3–5 bullet points with **consultative insights**
+- Link survey findings to industry frameworks (e.g., ISO 27001, NIST Cybersecurity Framework)
+
+### 6. Prioritized Action Plan
+- Create a table with columns: Priority, Action Item, Owner, Timeline, Expected Outcome
+- Provide at least one 'High' priority action.
+
+### 7. Risk Spotlight
+- Identify critical risks (e.g., unauthorized access, data breaches)
+- Assign a mitigation urgency: Immediate / Short-term / Long-term
+"""
+                elif dimension == "Metadata & Documentation":
+                    system_prompt = "You are a **senior data management consultant** specializing in Metadata & Documentation. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score, Comment, Category, Process, and Lifecycle Stage."
+                    user_prompt_template = """
+Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
+
+# Metadata & Documentation – Survey Analysis Report
+
+### 1. Executive Summary
+- Average score & distribution
+- Top 3 themes from comments
+- Overall maturity level (High / Medium / Low)
+
+### 2. Performance by Category
+- Create a table with columns: **Category**, Avg Score, % High (8–10), % Low (1–4), Key Comment Themes
+- Highlight top-performing and at-risk categories
+
+### 3. Performance by Process
+- Create a table with columns: **Process**, Avg Score, Key Gaps, Recommended Tools/Methods
+
+### 4. Performance by Lifecycle Stage
+- Visualize maturity progression (e.g., strong in Monitoring, weak in Prevention)
+
+### 5. Strategic Observations
+- 3–5 bullet points with **consultative insights**
+- Link survey findings to industry frameworks (e.g., DAMA-DMBOK, metadata schemas like Dublin Core)
+
+### 6. Prioritized Action Plan
+- Create a table with columns: Priority, Action Item, Owner, Timeline, Expected Outcome
+- Provide at least one 'High' priority action.
+
+### 7. Risk Spotlight
+- Identify critical risks (e.g., poor data discoverability, compliance issues)
+- Assign a mitigation urgency: Immediate / Short-term / Long-term
+"""
+
+                chunk_prompt = f"""Analyze the following survey responses for the {dimension} dimension (Part {i+1} of {len(chunks)}):
+
+Questions and Responses:
+"""
                 for q in chunk:
                     chunk_prompt += f"\nQuestion: {q['text']}\n"
+                    if q.get('guidance'):
+                        chunk_prompt += f"Guidance: {q['guidance']}\n"
+                    chunk_prompt += f"Category: {q.get('category', 'N/A')}\n"
+                    chunk_prompt += f"Process: {q.get('process', 'N/A')}\n"
+                    chunk_prompt += f"Lifecycle Stage: {q.get('lifecycle_stage', 'N/A')}\n"
                     chunk_prompt += f"Average Score: {q.get('avg_score', 'N/A')}\n"
                     
                     comments = q.get('comments', [])
@@ -101,13 +355,10 @@ Questions and Responses:
                         for comment in comments[:5]:  # Max 5 comments per question
                             chunk_prompt += f"  - {comment}\n"
                 
-                if len(chunks) > 1:
-                    chunk_prompt += f"\n\nProvide a concise analysis of this subset of questions. This is part {i+1} of {len(chunks)} parts."
-                else:
-                    chunk_prompt += "\n\nProvide a concise summary of the current state and actionable suggestions for improvement."
+                chunk_prompt += user_prompt_template
                 
                 messages = [
-                    {"role": "system", "content": "You are a data governance expert writing a professional report analyzing survey responses. Write in a formal, report-style format suitable for executive review. Use third-person perspective. DO NOT use first person (I, we) or ask questions. DO NOT include interactive elements like 'Let me analyze' or 'Would you like'. Provide clear, actionable insights in markdown format with proper headers, bullet points, and line breaks."},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": chunk_prompt}
                 ]
 
@@ -130,14 +381,13 @@ Questions and Responses:
                 for i, summary in enumerate(chunk_summaries):
                     consolidation_prompt += f"\n--- Part {i+1} Analysis ---\n{summary['content']}\n"
                 
-                consolidation_prompt += f"\n\nProvide a comprehensive, consolidated summary that integrates insights from all parts. Include:\n"
-                consolidation_prompt += "1. **Current State**: Overall assessment\n"
-                consolidation_prompt += "2. **Key Findings**: Most important insights\n"
-                consolidation_prompt += "3. **Recommendations**: Actionable improvement suggestions\n\n"
-                consolidation_prompt += "Use markdown formatting with clear headers and bullet points."
+                if dimension in ["Data Privacy & Compliance", "Data Ethics & Bias", "Data Lineage & Traceability", "Data Value & Lifecycle Management", "Data Governance & Management", "Data Security & Access", "Metadata & Documentation"]:
+                    consolidation_prompt += "\n\nConsolidate the analyses from all parts into a single, final report following the requested markdown structure. Ensure all sections are complete and well-structured based on the combined data from all parts."
+                else:
+                    consolidation_prompt += "\n\nProvide a comprehensive, consolidated summary that integrates insights from all parts. Include:\n1. **Current State**: Overall assessment\n2. **Key Findings**: Most important insights\n3. **Recommendations**: Actionable improvement suggestions\n\nUse markdown formatting with clear headers and bullet points."
                 
                 messages = [
-                    {"role": "system", "content": "You are a data governance expert writing a professional executive report. Write in a formal, report-style format suitable for C-level executives and board members. Use third-person perspective. DO NOT use first person (I, we) or ask questions. DO NOT include interactive elements or conversational language. Use markdown formatting with proper line breaks and structure."},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": consolidation_prompt}
                 ]
 
@@ -223,18 +473,38 @@ Questions and Responses:
                 for i, summary in enumerate(chunk_summaries):
                     final_prompt += f"\n--- Analysis Part {i+1} ---\n{summary}\n"
                 
-                final_prompt += """\n\nProvide a comprehensive executive summary that includes:
+                final_prompt += """
 
-1. **Executive Overview**: High-level organizational data governance maturity
-2. **Strengths**: Key areas of excellence across dimensions
-3. **Critical Gaps**: Most urgent areas needing attention
-4. **Strategic Recommendations**: Prioritized action items
-5. **Roadmap Considerations**: Suggested implementation approach
+Generate a professionally crafted, consultative, executive-ready report with the following sections:
 
-Use clear markdown formatting with headers, bullet points, and proper line breaks."""
+### 1. Executive Summary
+- High-level overview across all dimensions
+- Overall maturity score (aggregated average)
+- Top 3 cross-cutting themes
+
+### 2. Cross-Dimension Comparison
+- Create a table with columns: **Dimension**, Avg Score, Maturity Level, Key Strength/Weakness
+- Visualize overall performance (e.g., describe a radar chart)
+
+### 3. Interconnected Insights
+- Highlight linkages (e.g., governance weaknesses affecting quality)
+- Common patterns by Category/Process/Lifecycle across dimensions
+
+### 4. Consolidated Action Plan
+- Create a table with columns: Priority, Action Item, Affected Dimensions, Owner, Timeline, Expected Impact
+- Provide at least one 'High' priority action.
+
+### 5. Enterprise-Wide Risks
+- Top 5 risks with severity ratings
+- Mitigation strategies
+
+### 6. Roadmap for Maturity Improvement
+- Phased recommendations (Short/Mid/Long-term)
+- Metrics for tracking progress (e.g., KPI dashboards)
+"""
                 
                 messages = [
-                    {"role": "system", "content": "You are a Chief Data Officer writing a professional board-level strategic report. Write in a formal, report-style format suitable for board members and C-level executives. Use third-person perspective. Do NOT use first person (I, we) or ask questions. Do NOT include interactive elements or conversational language. Use markdown formatting."},
+                    {"role": "system", "content": "You are a **senior data management consultant** tasked with synthesizing insights across multiple data management dimensions. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format."},
                     {"role": "user", "content": final_prompt}
                 ]
 
@@ -252,18 +522,38 @@ Use clear markdown formatting with headers, bullet points, and proper line break
                 # Single call for smaller content
                 prompt = "Analyze the following dimension summaries and provide an overall organizational data governance assessment:\n\n"
                 prompt += all_summaries_text
-                prompt += """\n\nProvide an executive summary with:
+                prompt += """
 
-1. **Executive Overview**: Overall maturity assessment
-2. **Key Strengths**: Areas of excellence
-3. **Critical Gaps**: Urgent improvement areas
-4. **Strategic Recommendations**: Prioritized actions
-5. **Implementation Approach**: Suggested roadmap
+Generate a professionally crafted, consultative, executive-ready report with the following sections:
 
-Use markdown formatting with clear headers and bullet points."""
+### 1. Executive Summary
+- High-level overview across all dimensions
+- Overall maturity score (aggregated average)
+- Top 3 cross-cutting themes
+
+### 2. Cross-Dimension Comparison
+- Create a table with columns: **Dimension**, Avg Score, Maturity Level, Key Strength/Weakness
+- Visualize overall performance (e.g., describe a radar chart)
+
+### 3. Interconnected Insights
+- Highlight linkages (e.g., governance weaknesses affecting quality)
+- Common patterns by Category/Process/Lifecycle across dimensions
+
+### 4. Consolidated Action Plan
+- Create a table with columns: Priority, Action Item, Affected Dimensions, Owner, Timeline, Expected Impact
+- Provide at least one 'High' priority action.
+
+### 5. Enterprise-Wide Risks
+- Top 5 risks with severity ratings
+- Mitigation strategies
+
+### 6. Roadmap for Maturity Improvement
+- Phased recommendations (Short/Mid/Long-term)
+- Metrics for tracking progress (e.g., KPI dashboards)
+"""
                 
                 messages = [
-                    {"role": "system", "content": "You are a senior data governance consultant writing a professional executive report. Write in a formal, report-style format suitable for C-level executives. Use third-person perspective. Do NOT use first person (I, we) or ask questions. Do NOT include interactive elements or conversational language. Use markdown formatting."},
+                    {"role": "system", "content": "You are a **senior data management consultant** tasked with synthesizing insights across multiple data management dimensions. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format."},
                     {"role": "user", "content": prompt}
                 ]
 

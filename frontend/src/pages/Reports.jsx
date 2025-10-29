@@ -160,7 +160,7 @@ export default function Reports() {
 
       // Generate canvas from HTML
       const canvas = await html2canvas(tempContainer, {
-        scale: 2,
+        scale: 1.5, // Reduced scale to decrease file size
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff'
@@ -180,7 +180,7 @@ export default function Reports() {
       let position = -margin; // Start position for the first page
 
       // Add image to PDF (handle multiple pages if needed)
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 0.8); // Use JPEG with quality 0.8
       pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
