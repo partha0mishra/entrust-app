@@ -98,7 +98,7 @@ You are a senior data governance consultant.
 **Step 3**: Write observations with evidence.
 **Step 4**: Prioritize actions (Risk × Impact).
 **Step 5**: Self-score (1–10). Revise if <8.
-**Output ONLY the Markdown report** as requested below.
+**Output ONLY the Markdown report**.
 
 ---
 """
@@ -491,7 +491,7 @@ You are a senior data governance consultant.
 **Step 3**: Write observations with evidence.
 **Step 4**: Prioritize actions (Risk × Impact).
 **Step 5**: Self-score (1–10). Revise if <8.
-**Output ONLY the Markdown report** as requested below.
+**Output ONLY the Markdown report**.
 
 ---
 """
@@ -551,7 +551,7 @@ You are a senior data governance consultant.
 **Step 3**: Write observations with evidence.
 **Step 4**: Prioritize actions (Risk × Impact).
 **Step 5**: Self-score (1–10). Revise if <8.
-**Output ONLY the Markdown report** as requested below.
+**Output ONLY the Markdown report** .
 
 ---
 """
