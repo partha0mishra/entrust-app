@@ -17,6 +17,7 @@ export default function Reports() {
   const [customers, setCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [isSalesUser, setIsSalesUser] = useState(false);
+  const [showJson, setShowJson] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -78,10 +79,12 @@ export default function Reports() {
       }
       
       // Find customer code
-      const customer = [...customers, selectedCustomer].find(c => c && c.id === customerId);
-      if (customer) {
+      // Use a functional update for selectedCustomer to get the latest state
+      setSelectedCustomer(prevCustomer => {
+        const customer = customers.find(c => c && c.id === customerId) || prevCustomer;
         setCustomerCode(customer.customer_code || null);
-      }
+        return customer;
+      });
     } catch (error) {
       console.error('Failed to load dimensions:', error);
       setDimensions([]);
@@ -96,6 +99,7 @@ export default function Reports() {
     // Clear current report when changing customer
     setReport(null);
     setSelectedDimension(null);
+    setShowJson(false);
   };
 
   const loadDimensionReport = async (dimension) => {
@@ -107,6 +111,7 @@ export default function Reports() {
       const customerId = isSalesUser ? (selectedCustomer?.id || user.customer_id) : user.customer_id;
       const response = await reportAPI.getDimensionReport(customerId, dimension);
       setReport(response.data);
+      setShowJson(false);
     } catch (error) {
       console.error('Failed to load report:', error);
       alert('Failed to load report');
@@ -124,6 +129,7 @@ export default function Reports() {
       const customerId = isSalesUser ? (selectedCustomer?.id || user.customer_id) : user.customer_id;
       const response = await reportAPI.getOverallReport(customerId);
       setReport(response.data);
+      setShowJson(false);
     } catch (error) {
       console.error('Failed to load overall report:', error);
       alert('Failed to load overall report');
@@ -139,20 +145,28 @@ export default function Reports() {
     try {
       // Dynamically import jsPDF and html2canvas
       const { default: jsPDF } = await import('jspdf');
+      const { default: autoTable } = await import('jspdf-autotable');
       const html2canvas = (await import('html2canvas')).default;
 
       // Create a clone of the report content for PDF generation
       const content = reportRef.current.cloneNode(true);
       
-      // Remove download button from clone
+      // Remove download button and other interactive elements from clone
       const buttons = content.querySelectorAll('button');
       buttons.forEach(btn => btn.remove());
+
+      // Separate markdown content from tables for individual processing
+      const tables = content.querySelectorAll('table');
+      const nonTableContent = content.cloneNode(true);
+      nonTableContent.querySelectorAll('table').forEach(t => t.remove());
+
 
       // Create a temporary container
       const tempContainer = document.createElement('div');
       tempContainer.style.position = 'absolute';
       tempContainer.style.left = '-9999px';
-      tempContainer.style.width = '210mm'; // A4 width
+      // Use a fixed width that works well for html2canvas rendering
+      tempContainer.style.width = '1000px'; 
       tempContainer.style.padding = '20px';
       tempContainer.style.backgroundColor = 'white';
       tempContainer.appendChild(content);
@@ -160,35 +174,66 @@ export default function Reports() {
 
       // Generate canvas from HTML
       const canvas = await html2canvas(tempContainer, {
+        width: tempContainer.scrollWidth,
+        height: tempContainer.scrollHeight,
         scale: 1.5, // Reduced scale to decrease file size
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff'
       });
 
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdf = new jsPDF('p', 'mm', 'a4'); // portrait, mm, a4
+      const margin = 15;
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10; // 10mm margin
 
-      // Calculate PDF dimensions
+      const addHeaderAndFooter = (pdf, pageNum, totalPages) => {
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        // Header
+        pdf.setFontSize(10);
+        pdf.setTextColor(150);
+        pdf.text('EnTrust (TM) by Encora', margin, 10);
+        
+        const customerName = selectedCustomer?.name || '';
+        if (customerName) {
+          const customerNameWidth = pdf.getStringUnitWidth(customerName) * pdf.getFontSize() / pdf.internal.scaleFactor;
+          pdf.text(customerName, pdfWidth - margin - customerNameWidth, 10);
+        }
+        
+        // Footer
+        const footerText = `Page ${pageNum} of ${totalPages}`;
+        const footerTextWidth = pdf.getStringUnitWidth(footerText) * pdf.getFontSize() / pdf.internal.scaleFactor;
+        pdf.text(footerText, (pdfWidth - footerTextWidth) / 2, pdfHeight - 10);
+      };
+
+      // 1. Add non-table content as an image
+      const imgData = canvas.toDataURL('image/jpeg', 0.8);
       const imgWidth = pdfWidth - margin * 2;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      const pageHeight = pdfHeight - margin * 2;
-      
-      let heightLeft = imgHeight;
-      let position = -margin; // Start position for the first page
+      pdf.addImage(imgData, 'JPEG', margin, margin + 5, imgWidth, imgHeight);
 
-      // Add image to PDF (handle multiple pages if needed)
-      const imgData = canvas.toDataURL('image/jpeg', 0.8); // Use JPEG with quality 0.8
-      pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      let lastY = margin + 5 + imgHeight;
 
-      while (heightLeft > 0) {
-        position -= pdfHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+      // 2. Add tables using autoTable
+      tables.forEach(table => {
+        autoTable(pdf, {
+          html: table,
+          startY: lastY + 5,
+          theme: 'grid',
+          headStyles: { fillColor: [230, 230, 230], textColor: 20 },
+          styles: { fontSize: 8 },
+          margin: { left: margin, right: margin },
+          didDrawPage: (data) => {
+            // This will be handled in the final loop
+          }
+        });
+        lastY = pdf.lastAutoTable.finalY;
+      });
+
+      // 3. Add headers and footers to all pages
+      const totalPages = pdf.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        addHeaderAndFooter(pdf, i, totalPages);
       }
 
       // Save PDF
@@ -335,11 +380,11 @@ export default function Reports() {
                     Executive Summary
                   </h3>
                   <div className="prose prose-sm max-w-none text-gray-800">
-                    <ReactMarkdown 
+                    <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={markdownComponents}
                     >
-                      {report.overall_summary}
+                      {report.markdown_content || report.overall_summary}
                     </ReactMarkdown>
                   </div>
                 </div>
@@ -481,7 +526,7 @@ export default function Reports() {
                       remarkPlugins={[remarkGfm]}
                       components={markdownComponents}
                     >
-                      {report.llm_summary}
+                      {report.final_summary || report.llm_summary}
                     </ReactMarkdown>
                   </div>
                 </div>
@@ -577,6 +622,32 @@ export default function Reports() {
                   )}
                 </button>
               </div>
+
+              {/* JSON Output Section */}
+              {(report.final_json || report.json_content) && (
+                <div className="mt-8 border-t pt-6">
+                  <button
+                    onClick={() => setShowJson(!showJson)}
+                    className="text-lg font-semibold text-gray-700 hover:text-encora-green flex items-center"
+                  >
+                    {showJson ? (
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    ) : (
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    )}
+                    View Raw JSON Output
+                  </button>
+                  {showJson && (
+                    <div className="mt-4 bg-gray-900 text-white p-4 rounded-lg overflow-x-auto">
+                      <pre className="text-sm">
+                        <code>
+                          {JSON.stringify(report.final_json || report.json_content, null, 2)}
+                        </code>
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
