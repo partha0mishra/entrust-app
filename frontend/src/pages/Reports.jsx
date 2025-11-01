@@ -4,6 +4,11 @@ import { reportAPI } from '../api';
 import Breadcrumb from '../components/Breadcrumb';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import RadarChart from '../components/RadarChart';
+import FacetBarChart from '../components/FacetBarChart';
+import MetricsTable from '../components/MetricsTable';
+import CommentWordCloud from '../components/CommentWordCloud';
+import LLMAnalysisDisplay from '../components/LLMAnalysisDisplay';
 
 export default function Reports() {
   const [user, setUser] = useState(null);
@@ -462,21 +467,47 @@ export default function Reports() {
             </>
           ) : (
             <>
-              {/* Dimension LLM Summary */}
-              {report.llm_summary && (
-                <div className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border-2 border-green-200">
-                  <h3 className="text-lg font-bold mb-4 text-encora-green flex items-center">
-                    <span className="text-2xl mr-2">🤖</span>
-                    AI-Generated Summary & Suggestions
-                  </h3>
-                  <div className="prose prose-sm max-w-none text-gray-800">
-                    <ReactMarkdown 
-                      remarkPlugins={[remarkGfm]}
-                      components={markdownComponents}
-                    >
-                      {report.llm_summary}
-                    </ReactMarkdown>
+              {/* Section 1: Overall Metrics */}
+              {report.overall_metrics && (
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold mb-4">Dimension Overview</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg shadow-sm border border-green-200">
+                      <div className="text-3xl font-bold text-green-700">
+                        {report.overall_metrics.avg_score !== null ? report.overall_metrics.avg_score.toFixed(2) : 'N/A'}
+                      </div>
+                      <div className="text-sm text-gray-700 font-medium">Avg Score</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg shadow-sm border border-blue-200">
+                      <div className="text-3xl font-bold text-blue-700">
+                        {report.overall_metrics.response_rate}
+                      </div>
+                      <div className="text-sm text-gray-700 font-medium">Response Rate</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg shadow-sm border border-purple-200">
+                      <div className="text-3xl font-bold text-purple-700">
+                        {report.overall_metrics.total_responses}
+                      </div>
+                      <div className="text-sm text-gray-700 font-medium">Total Responses</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg shadow-sm border border-orange-200">
+                      <div className="text-3xl font-bold text-orange-700">
+                        {report.overall_metrics.total_respondents}/{report.overall_metrics.total_users}
+                      </div>
+                      <div className="text-sm text-gray-700 font-medium">Respondents</div>
+                    </div>
                   </div>
+                </div>
+              )}
+
+              {/* Section 2: Dimension-Level LLM Analysis */}
+              {report.dimension_llm_analysis && (
+                <div className="mb-8">
+                  <LLMAnalysisDisplay
+                    content={report.dimension_llm_analysis}
+                    title="Strategic Analysis & Recommendations"
+                    icon="📊"
+                  />
                 </div>
               )}
 
@@ -494,60 +525,244 @@ export default function Reports() {
                 </div>
               )}
 
-              {/* Question Data Table */}
-              <div className="overflow-x-auto rounded-lg border border-gray-200">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
-                        Q#
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Question
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Responses
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Min Score
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Max Score
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Avg Score
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {report.questions?.map((q, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 text-sm font-semibold text-gray-700 text-center">
-                          {index + 1}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          {q.question}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
-                          {q.responded}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
-                          {q.min_score !== null ? q.min_score : '-'}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
-                          {q.max_score !== null ? q.max_score : '-'}
-                        </td>
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
-                          {q.avg_score !== null ? q.avg_score : '-'}
-                        </td>
+              {/* Section 3: Category Analysis */}
+              {report.category_analysis && Object.keys(report.category_analysis).length > 0 && (
+                <div className="mb-8 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-md">
+                  <h3 className="text-xl font-bold mb-6 text-gray-900 flex items-center">
+                    <span className="text-2xl mr-2">📂</span>
+                    Category Analysis
+                  </h3>
+
+                  <div className="grid md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                      <FacetBarChart
+                        data={Object.values(report.category_analysis)}
+                        facetType="category"
+                        title="Category Scores Comparison"
+                      />
+                    </div>
+                    <div>
+                      <MetricsTable
+                        data={Object.values(report.category_analysis)}
+                        facetType="Category"
+                      />
+                    </div>
+                  </div>
+
+                  {report.category_llm_analyses && Object.keys(report.category_llm_analyses).length > 0 && (
+                    <div className="mt-6 space-y-4">
+                      <h4 className="text-lg font-semibold text-gray-800">Category-Specific Insights</h4>
+                      {Object.entries(report.category_llm_analyses).map(([category, analysis]) => (
+                        <details key={category} className="bg-blue-50 border border-blue-200 rounded-lg">
+                          <summary className="cursor-pointer p-4 font-semibold text-blue-900 hover:bg-blue-100 transition">
+                            {category}
+                          </summary>
+                          <div className="p-4 border-t border-blue-200">
+                            <LLMAnalysisDisplay
+                              content={analysis}
+                            />
+                          </div>
+                        </details>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Section 4: Process Analysis */}
+              {report.process_analysis && Object.keys(report.process_analysis).length > 0 && (
+                <div className="mb-8 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-md">
+                  <h3 className="text-xl font-bold mb-6 text-gray-900 flex items-center">
+                    <span className="text-2xl mr-2">⚙️</span>
+                    Process Analysis
+                  </h3>
+
+                  <div className="grid md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                      <FacetBarChart
+                        data={Object.values(report.process_analysis)}
+                        facetType="process"
+                        title="Process Scores Comparison"
+                      />
+                    </div>
+                    <div>
+                      <MetricsTable
+                        data={Object.values(report.process_analysis)}
+                        facetType="Process"
+                      />
+                    </div>
+                  </div>
+
+                  {report.process_llm_analyses && Object.keys(report.process_llm_analyses).length > 0 && (
+                    <div className="mt-6 space-y-4">
+                      <h4 className="text-lg font-semibold text-gray-800">Process-Specific Insights</h4>
+                      {Object.entries(report.process_llm_analyses).map(([process, analysis]) => (
+                        <details key={process} className="bg-purple-50 border border-purple-200 rounded-lg">
+                          <summary className="cursor-pointer p-4 font-semibold text-purple-900 hover:bg-purple-100 transition">
+                            {process}
+                          </summary>
+                          <div className="p-4 border-t border-purple-200">
+                            <LLMAnalysisDisplay
+                              content={analysis}
+                            />
+                          </div>
+                        </details>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Section 5: Lifecycle Stage Analysis */}
+              {report.lifecycle_analysis && Object.keys(report.lifecycle_analysis).length > 0 && (
+                <div className="mb-8 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-md">
+                  <h3 className="text-xl font-bold mb-6 text-gray-900 flex items-center">
+                    <span className="text-2xl mr-2">🔄</span>
+                    Lifecycle Stage Analysis
+                  </h3>
+
+                  <div className="grid md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                      <FacetBarChart
+                        data={Object.values(report.lifecycle_analysis)}
+                        facetType="lifecycle_stage"
+                        title="Lifecycle Stage Scores Comparison"
+                      />
+                    </div>
+                    <div>
+                      <MetricsTable
+                        data={Object.values(report.lifecycle_analysis)}
+                        facetType="Lifecycle Stage"
+                      />
+                    </div>
+                  </div>
+
+                  {report.lifecycle_llm_analyses && Object.keys(report.lifecycle_llm_analyses).length > 0 && (
+                    <div className="mt-6 space-y-4">
+                      <h4 className="text-lg font-semibold text-gray-800">Lifecycle-Specific Insights</h4>
+                      {Object.entries(report.lifecycle_llm_analyses).map(([lifecycle, analysis]) => (
+                        <details key={lifecycle} className="bg-green-50 border border-green-200 rounded-lg">
+                          <summary className="cursor-pointer p-4 font-semibold text-green-900 hover:bg-green-100 transition">
+                            {lifecycle}
+                          </summary>
+                          <div className="p-4 border-t border-green-200">
+                            <LLMAnalysisDisplay
+                              content={analysis}
+                            />
+                          </div>
+                        </details>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Section 6: Comment Analysis */}
+              {report.comment_insights && report.comment_insights.total_comments > 0 && (
+                <div className="mb-8 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-md">
+                  <h3 className="text-xl font-bold mb-6 text-gray-900 flex items-center">
+                    <span className="text-2xl mr-2">💬</span>
+                    Comment Analysis
+                  </h3>
+
+                  <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Total Comments:</span>
+                      <span className="text-lg font-bold text-gray-900">{report.comment_insights.total_comments}</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-sm font-medium text-gray-700">Avg Comment Length:</span>
+                      <span className="text-lg font-bold text-gray-900">{report.comment_insights.avg_comment_length} chars</span>
+                    </div>
+                  </div>
+
+                  {report.comment_insights.word_frequency && Object.keys(report.comment_insights.word_frequency).length > 0 && (
+                    <div className="mb-6">
+                      <CommentWordCloud
+                        wordFrequency={report.comment_insights.word_frequency}
+                        title="Most Frequently Mentioned Words"
+                      />
+                    </div>
+                  )}
+
+                  {report.comment_insights.llm_analysis && (
+                    <div className="mt-6">
+                      <LLMAnalysisDisplay
+                        content={report.comment_insights.llm_analysis}
+                        title="Comment Sentiment & Themes Analysis"
+                        icon="💭"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Section 7: Question-Level Details */}
+              <div className="mb-8">
+                <h3 className="text-xl font-bold mb-4 text-gray-900 flex items-center">
+                  <span className="text-2xl mr-2">📋</span>
+                  Question-Level Details
+                </h3>
+                <div className="overflow-x-auto rounded-lg border border-gray-200">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                          Q#
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Question
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Category
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Process
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Lifecycle
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Responses
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Avg Score
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {report.questions?.map((q, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-700 text-center">
+                            {q.question_id || index + 1}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-900">
+                            {q.question}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                            {q.category || '-'}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                            {q.process || '-'}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                            {q.lifecycle_stage || '-'}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+                            {q.responded}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
+                            {q.avg_score !== null ? q.avg_score.toFixed(2) : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               <div className="mt-6 flex space-x-4">
-                <button 
+                <button
                   onClick={handleDownloadPDF}
                   disabled={downloading}
                   className="px-6 py-3 bg-encora-green text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center shadow-md hover:shadow-lg transition"
