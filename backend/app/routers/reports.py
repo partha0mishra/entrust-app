@@ -89,13 +89,18 @@ def aggregate_by_facet(
 def analyze_comments_basic(all_comments: List[str]) -> Dict:
     """
     Perform basic comment analysis without LLM
-    Returns word frequency and basic statistics
+    Returns word frequency, basic statistics, and simple sentiment analysis
     """
     if not all_comments:
         return {
             'total_comments': 0,
             'word_frequency': {},
-            'avg_comment_length': 0
+            'avg_comment_length': 0,
+            'positive_count': 0,
+            'negative_count': 0,
+            'neutral_count': 0,
+            'positive_words': [],
+            'negative_words': []
         }
 
     # Word frequency analysis
@@ -106,11 +111,20 @@ def analyze_comments_basic(all_comments: List[str]) -> Dict:
         'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should',
         'could', 'may', 'might', 'can', 'this', 'that', 'these', 'those',
         'i', 'you', 'he', 'she', 'it', 'we', 'they', 'what', 'which', 'who',
-        'when', 'where', 'why', 'how', 'not', 'no', 'yes'
+        'when', 'where', 'why', 'how', 'not', 'no', 'yes',
+        # Additional stop words
+        'some', 'there', 'its', 'their', 'our', 'your', 'my', 'his', 'her',
+        'them', 'us', 'me', 'him', 'from', 'into', 'out', 'up', 'down',
+        'over', 'under', 'about', 'just', 'very', 'so', 'than', 'too',
+        'also', 'only', 'other', 'such', 'more', 'most', 'much', 'many',
+        'any', 'all', 'both', 'each', 'few', 'as', 'by', 'if', 'then',
+        'because', 'while', 'after', 'before', 'since', 'until', 'through',
+        'during', 'within', 'without', 'between', 'among'
     }
 
     word_counter = Counter()
     total_length = 0
+    all_meaningful_words = []
 
     for comment in all_comments:
         total_length += len(comment)
@@ -123,14 +137,65 @@ def analyze_comments_basic(all_comments: List[str]) -> Dict:
             if len(w) > 3 and w.lower() not in stop_words
         ]
         word_counter.update(meaningful_words)
+        all_meaningful_words.append(meaningful_words)
 
     # Get top 20 words
     top_words = dict(word_counter.most_common(20))
 
+    # Simple sentiment analysis using keyword matching
+    positive_keywords = {
+        'good', 'great', 'excellent', 'amazing', 'wonderful', 'fantastic', 'awesome',
+        'strong', 'effective', 'efficient', 'helpful', 'useful', 'valuable', 'benefit',
+        'improved', 'improvement', 'better', 'best', 'well', 'clear', 'easy', 'simple',
+        'comprehensive', 'robust', 'reliable', 'satisfied', 'satisfaction', 'success',
+        'successful', 'positive', 'progress', 'advanced', 'quality', 'sound'
+    }
+
+    negative_keywords = {
+        'poor', 'bad', 'terrible', 'awful', 'horrible', 'worst', 'weak', 'ineffective',
+        'inefficient', 'useless', 'lacking', 'missing', 'inadequate', 'insufficient',
+        'issue', 'issues', 'problem', 'problems', 'concern', 'concerns', 'challenge',
+        'challenges', 'difficulty', 'difficult', 'hard', 'complicated', 'complex',
+        'confusing', 'unclear', 'inconsistent', 'incomplete', 'limited', 'lack',
+        'need', 'needs', 'require', 'required', 'should', 'must', 'gap', 'gaps'
+    }
+
+    positive_count = 0
+    negative_count = 0
+    neutral_count = 0
+    positive_comment_words = Counter()
+    negative_comment_words = Counter()
+
+    for idx, comment in enumerate(all_comments):
+        comment_lower = comment.lower()
+        words_in_comment = set(comment_lower.split())
+
+        # Check for positive and negative keywords
+        has_positive = any(keyword in words_in_comment for keyword in positive_keywords)
+        has_negative = any(keyword in words_in_comment for keyword in negative_keywords)
+
+        if has_positive and not has_negative:
+            positive_count += 1
+            # Track words from positive comments
+            if idx < len(all_meaningful_words):
+                positive_comment_words.update(all_meaningful_words[idx])
+        elif has_negative and not has_positive:
+            negative_count += 1
+            # Track words from negative comments
+            if idx < len(all_meaningful_words):
+                negative_comment_words.update(all_meaningful_words[idx])
+        else:
+            neutral_count += 1
+
     return {
         'total_comments': len(all_comments),
         'word_frequency': top_words,
-        'avg_comment_length': round(total_length / len(all_comments), 1) if all_comments else 0
+        'avg_comment_length': round(total_length / len(all_comments), 1) if all_comments else 0,
+        'positive_count': positive_count,
+        'negative_count': negative_count,
+        'neutral_count': neutral_count,
+        'positive_words': dict(positive_comment_words.most_common(10)),
+        'negative_words': dict(negative_comment_words.most_common(10))
     }
 
 @router.get("/customers")

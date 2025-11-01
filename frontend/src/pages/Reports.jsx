@@ -110,6 +110,14 @@ export default function Reports() {
 
     try {
       const customerId = isSalesUser ? (selectedCustomer?.id || user.customer_id) : user.customer_id;
+
+      // Ensure customer code is set
+      if (isSalesUser && selectedCustomer) {
+        setCustomerCode(selectedCustomer.customer_code);
+      } else if (user.customer_code) {
+        setCustomerCode(user.customer_code);
+      }
+
       const response = await reportAPI.getDimensionReport(customerId, dimension);
       setReport(response.data);
     } catch (error) {
@@ -127,6 +135,14 @@ export default function Reports() {
 
     try {
       const customerId = isSalesUser ? (selectedCustomer?.id || user.customer_id) : user.customer_id;
+
+      // Ensure customer code is set
+      if (isSalesUser && selectedCustomer) {
+        setCustomerCode(selectedCustomer.customer_code);
+      } else if (user.customer_code) {
+        setCustomerCode(user.customer_code);
+      }
+
       const response = await reportAPI.getOverallReport(customerId);
       setReport(response.data);
     } catch (error) {
@@ -146,9 +162,13 @@ export default function Reports() {
       const { default: jsPDF } = await import('jspdf');
       const html2canvas = (await import('html2canvas')).default;
 
+      // Expand all accordion/details elements in the original
+      const allDetails = reportRef.current.querySelectorAll('details');
+      allDetails.forEach(detail => detail.setAttribute('open', ''));
+
       // Create a clone of the report content for PDF generation
       const content = reportRef.current.cloneNode(true);
-      
+
       // Remove download button from clone
       const buttons = content.querySelectorAll('button');
       buttons.forEach(btn => btn.remove());
@@ -527,37 +547,38 @@ export default function Reports() {
 
               {/* Section 3: Category Analysis */}
               {report.category_analysis && Object.keys(report.category_analysis).length > 0 && (
-                <div className="mb-8 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-md">
+                <div className="mb-8 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-md page-break">
                   <h3 className="text-xl font-bold mb-6 text-gray-900 flex items-center">
                     <span className="text-2xl mr-2">📂</span>
                     Category Analysis
                   </h3>
 
-                  <div className="grid md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <FacetBarChart
-                        data={Object.values(report.category_analysis)}
-                        facetType="category"
-                        title="Category Scores Comparison"
-                      />
-                    </div>
-                    <div>
-                      <MetricsTable
-                        data={Object.values(report.category_analysis)}
-                        facetType="Category"
-                      />
-                    </div>
+                  {/* Chart on top */}
+                  <div className="mb-8">
+                    <FacetBarChart
+                      data={Object.values(report.category_analysis)}
+                      facetType="category"
+                      title="Category Scores Comparison"
+                    />
+                  </div>
+
+                  {/* Table at bottom */}
+                  <div className="mt-6">
+                    <MetricsTable
+                      data={Object.values(report.category_analysis)}
+                      facetType="Category"
+                    />
                   </div>
 
                   {report.category_llm_analyses && Object.keys(report.category_llm_analyses).length > 0 && (
-                    <div className="mt-6 space-y-4">
-                      <h4 className="text-lg font-semibold text-gray-800">Category-Specific Insights</h4>
+                    <div className="mt-8 space-y-4">
+                      <h4 className="text-lg font-semibold text-gray-800 mb-4">Category-Specific Insights</h4>
                       {Object.entries(report.category_llm_analyses).map(([category, analysis]) => (
-                        <details key={category} className="bg-blue-50 border border-blue-200 rounded-lg">
-                          <summary className="cursor-pointer p-4 font-semibold text-blue-900 hover:bg-blue-100 transition">
+                        <details key={category} className="bg-blue-50 border-2 border-blue-300 rounded-lg accordion-section print-section-break">
+                          <summary className="cursor-pointer p-4 font-semibold text-blue-900 hover:bg-blue-100 transition print-heading">
                             {category}
                           </summary>
-                          <div className="p-4 border-t border-blue-200">
+                          <div className="p-6 border-t-2 border-blue-200 print-content">
                             <LLMAnalysisDisplay
                               content={analysis}
                             />
@@ -571,37 +592,38 @@ export default function Reports() {
 
               {/* Section 4: Process Analysis */}
               {report.process_analysis && Object.keys(report.process_analysis).length > 0 && (
-                <div className="mb-8 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-md">
+                <div className="mb-8 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-md page-break">
                   <h3 className="text-xl font-bold mb-6 text-gray-900 flex items-center">
                     <span className="text-2xl mr-2">⚙️</span>
                     Process Analysis
                   </h3>
 
-                  <div className="grid md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <FacetBarChart
-                        data={Object.values(report.process_analysis)}
-                        facetType="process"
-                        title="Process Scores Comparison"
-                      />
-                    </div>
-                    <div>
-                      <MetricsTable
-                        data={Object.values(report.process_analysis)}
-                        facetType="Process"
-                      />
-                    </div>
+                  {/* Chart on top */}
+                  <div className="mb-8">
+                    <FacetBarChart
+                      data={Object.values(report.process_analysis)}
+                      facetType="process"
+                      title="Process Scores Comparison"
+                    />
+                  </div>
+
+                  {/* Table at bottom */}
+                  <div className="mt-6">
+                    <MetricsTable
+                      data={Object.values(report.process_analysis)}
+                      facetType="Process"
+                    />
                   </div>
 
                   {report.process_llm_analyses && Object.keys(report.process_llm_analyses).length > 0 && (
-                    <div className="mt-6 space-y-4">
-                      <h4 className="text-lg font-semibold text-gray-800">Process-Specific Insights</h4>
+                    <div className="mt-8 space-y-4">
+                      <h4 className="text-lg font-semibold text-gray-800 mb-4">Process-Specific Insights</h4>
                       {Object.entries(report.process_llm_analyses).map(([process, analysis]) => (
-                        <details key={process} className="bg-purple-50 border border-purple-200 rounded-lg">
-                          <summary className="cursor-pointer p-4 font-semibold text-purple-900 hover:bg-purple-100 transition">
+                        <details key={process} className="bg-purple-50 border-2 border-purple-300 rounded-lg accordion-section print-section-break">
+                          <summary className="cursor-pointer p-4 font-semibold text-purple-900 hover:bg-purple-100 transition print-heading">
                             {process}
                           </summary>
-                          <div className="p-4 border-t border-purple-200">
+                          <div className="p-6 border-t-2 border-purple-200 print-content">
                             <LLMAnalysisDisplay
                               content={analysis}
                             />
@@ -615,37 +637,38 @@ export default function Reports() {
 
               {/* Section 5: Lifecycle Stage Analysis */}
               {report.lifecycle_analysis && Object.keys(report.lifecycle_analysis).length > 0 && (
-                <div className="mb-8 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-md">
+                <div className="mb-8 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-md page-break">
                   <h3 className="text-xl font-bold mb-6 text-gray-900 flex items-center">
                     <span className="text-2xl mr-2">🔄</span>
                     Lifecycle Stage Analysis
                   </h3>
 
-                  <div className="grid md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <FacetBarChart
-                        data={Object.values(report.lifecycle_analysis)}
-                        facetType="lifecycle_stage"
-                        title="Lifecycle Stage Scores Comparison"
-                      />
-                    </div>
-                    <div>
-                      <MetricsTable
-                        data={Object.values(report.lifecycle_analysis)}
-                        facetType="Lifecycle Stage"
-                      />
-                    </div>
+                  {/* Chart on top */}
+                  <div className="mb-8">
+                    <FacetBarChart
+                      data={Object.values(report.lifecycle_analysis)}
+                      facetType="lifecycle_stage"
+                      title="Lifecycle Stage Scores Comparison"
+                    />
+                  </div>
+
+                  {/* Table at bottom */}
+                  <div className="mt-6">
+                    <MetricsTable
+                      data={Object.values(report.lifecycle_analysis)}
+                      facetType="Lifecycle Stage"
+                    />
                   </div>
 
                   {report.lifecycle_llm_analyses && Object.keys(report.lifecycle_llm_analyses).length > 0 && (
-                    <div className="mt-6 space-y-4">
-                      <h4 className="text-lg font-semibold text-gray-800">Lifecycle-Specific Insights</h4>
+                    <div className="mt-8 space-y-4">
+                      <h4 className="text-lg font-semibold text-gray-800 mb-4">Lifecycle-Specific Insights</h4>
                       {Object.entries(report.lifecycle_llm_analyses).map(([lifecycle, analysis]) => (
-                        <details key={lifecycle} className="bg-green-50 border border-green-200 rounded-lg">
-                          <summary className="cursor-pointer p-4 font-semibold text-green-900 hover:bg-green-100 transition">
+                        <details key={lifecycle} className="bg-green-50 border-2 border-green-300 rounded-lg accordion-section print-section-break">
+                          <summary className="cursor-pointer p-4 font-semibold text-green-900 hover:bg-green-100 transition print-heading">
                             {lifecycle}
                           </summary>
-                          <div className="p-4 border-t border-green-200">
+                          <div className="p-6 border-t-2 border-green-200 print-content">
                             <LLMAnalysisDisplay
                               content={analysis}
                             />
@@ -659,20 +682,33 @@ export default function Reports() {
 
               {/* Section 6: Comment Analysis */}
               {report.comment_insights && report.comment_insights.total_comments > 0 && (
-                <div className="mb-8 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-md">
+                <div className="mb-8 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-md page-break">
                   <h3 className="text-xl font-bold mb-6 text-gray-900 flex items-center">
                     <span className="text-2xl mr-2">💬</span>
                     Comment Analysis
                   </h3>
 
-                  <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">Total Comments:</span>
-                      <span className="text-lg font-bold text-gray-900">{report.comment_insights.total_comments}</span>
+                  {/* Statistics and Sentiment */}
+                  <div className="mb-6 grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="text-2xl font-bold text-gray-900">{report.comment_insights.total_comments}</div>
+                      <div className="text-xs text-gray-600">Total Comments</div>
                     </div>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-sm font-medium text-gray-700">Avg Comment Length:</span>
-                      <span className="text-lg font-bold text-gray-900">{report.comment_insights.avg_comment_length} chars</span>
+                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                      <div className="text-2xl font-bold text-green-700">{report.comment_insights.positive_count || 0}</div>
+                      <div className="text-xs text-gray-600">Positive</div>
+                    </div>
+                    <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                      <div className="text-2xl font-bold text-red-700">{report.comment_insights.negative_count || 0}</div>
+                      <div className="text-xs text-gray-600">Negative</div>
+                    </div>
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="text-2xl font-bold text-blue-700">{report.comment_insights.neutral_count || 0}</div>
+                      <div className="text-xs text-gray-600">Neutral</div>
+                    </div>
+                    <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                      <div className="text-2xl font-bold text-purple-700">{report.comment_insights.avg_comment_length}</div>
+                      <div className="text-xs text-gray-600">Avg Length (chars)</div>
                     </div>
                   </div>
 
@@ -790,5 +826,88 @@ export default function Reports() {
         </div>
       )}
     </div>
+    <style>{`
+      @media print {
+        /* Page break control */
+        .page-break {
+          page-break-before: auto;
+          break-before: auto;
+        }
+
+        .print-section-break {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+
+        /* Expand all accordions for printing */
+        details {
+          display: block !important;
+        }
+
+        details summary {
+          display: block !important;
+          list-style: none;
+          page-break-after: avoid;
+          font-weight: 600;
+          margin-bottom: 0.5rem;
+          background-color: #f3f4f6 !important;
+          padding: 0.75rem !important;
+          border-radius: 0.5rem;
+        }
+
+        details summary::-webkit-details-marker {
+          display: none;
+        }
+
+        details[open] summary ~ * {
+          display: block !important;
+        }
+
+        .print-content {
+          page-break-inside: avoid;
+          padding: 1rem !important;
+        }
+
+        /* Table improvements for print */
+        table {
+          page-break-inside: auto;
+        }
+
+        tr {
+          page-break-inside: avoid;
+          page-break-after: auto;
+        }
+
+        thead {
+          display: table-header-group;
+        }
+
+        tfoot {
+          display: table-footer-group;
+        }
+
+        /* Chart containers */
+        .recharts-wrapper,
+        svg {
+          page-break-inside: avoid;
+        }
+
+        /* Hide interactive elements */
+        button {
+          display: none !important;
+        }
+
+        /* Better spacing */
+        h2, h3, h4 {
+          page-break-after: avoid;
+        }
+
+        /* Ensure borders show in print */
+        * {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+      }
+    `}</style>
   );
 }

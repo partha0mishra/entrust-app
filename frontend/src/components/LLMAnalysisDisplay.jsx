@@ -28,7 +28,7 @@ export default function LLMAnalysisDisplay({ content, title, icon = '🤖' }) {
         </div>
       )}
 
-      <div className="prose prose-sm max-w-none prose-headings:text-gray-800 prose-p:text-gray-700 prose-strong:text-gray-900 prose-ul:text-gray-700 prose-ol:text-gray-700">
+      <div className="prose prose-sm max-w-none prose-headings:text-gray-800 prose-headings:mt-6 prose-headings:mb-4 prose-p:text-gray-700 prose-p:my-3 prose-p:leading-relaxed prose-strong:text-gray-900 prose-ul:text-gray-700 prose-ul:my-4 prose-ol:text-gray-700 prose-ol:my-4 prose-li:my-1.5 prose-table:border-2 prose-table:border-gray-300 prose-thead:bg-gray-100 prose-th:border prose-th:border-gray-300 prose-th:px-4 prose-th:py-2 prose-td:border prose-td:border-gray-200 prose-td:px-4 prose-td:py-2">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>
           {content}
         </ReactMarkdown>

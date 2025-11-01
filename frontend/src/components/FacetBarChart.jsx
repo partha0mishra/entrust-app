@@ -31,10 +31,10 @@ export default function FacetBarChart({ data, facetType = 'category', title }) {
   return (
     <div>
       {title && <h4 className="text-sm font-medium text-gray-700 mb-2">{title}</h4>}
-      <ResponsiveContainer width="100%" height={400}>
+      <ResponsiveContainer width="100%" height={450}>
         <BarChart
           data={sortedData}
-          margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+          margin={{ top: 30, right: 30, left: 40, bottom: 100 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis
