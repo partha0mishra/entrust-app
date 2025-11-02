@@ -606,7 +606,7 @@ async def get_overall_report(
                     dimension,
                     questions_for_llm
                 )
-                
+
                 if llm_response.get("success"):
                     dimension_summaries[dimension] = llm_response.get("final_summary", "Summary generation failed")
                 else:
@@ -644,7 +644,7 @@ async def get_overall_report(
                 orchestrate_llm,
                 dimension_summaries
             )
-            
+
             if llm_response.get("success"):
                 overall_summary = llm_response.get("content")
             else:

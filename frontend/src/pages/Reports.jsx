@@ -22,6 +22,7 @@ export default function Reports() {
   const [customers, setCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [isSalesUser, setIsSalesUser] = useState(false);
+  const [showJson, setShowJson] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -83,10 +84,12 @@ export default function Reports() {
       }
       
       // Find customer code
-      const customer = [...customers, selectedCustomer].find(c => c && c.id === customerId);
-      if (customer) {
+      // Use a functional update for selectedCustomer to get the latest state
+      setSelectedCustomer(prevCustomer => {
+        const customer = customers.find(c => c && c.id === customerId) || prevCustomer;
         setCustomerCode(customer.customer_code || null);
-      }
+        return customer;
+      });
     } catch (error) {
       console.error('Failed to load dimensions:', error);
       setDimensions([]);
@@ -101,6 +104,7 @@ export default function Reports() {
     // Clear current report when changing customer
     setReport(null);
     setSelectedDimension(null);
+    setShowJson(false);
   };
 
   const loadDimensionReport = async (dimension) => {
@@ -120,6 +124,7 @@ export default function Reports() {
 
       const response = await reportAPI.getDimensionReport(customerId, dimension);
       setReport(response.data);
+      setShowJson(false);
     } catch (error) {
       console.error('Failed to load report:', error);
       alert('Failed to load report');
@@ -145,6 +150,7 @@ export default function Reports() {
 
       const response = await reportAPI.getOverallReport(customerId);
       setReport(response.data);
+      setShowJson(false);
     } catch (error) {
       console.error('Failed to load overall report:', error);
       alert('Failed to load overall report');
@@ -349,11 +355,11 @@ export default function Reports() {
                     Executive Summary
                   </h3>
                   <div className="prose prose-sm max-w-none text-gray-800">
-                    <ReactMarkdown 
+                    <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={markdownComponents}
                     >
-                      {report.overall_summary}
+                      {report.markdown_content || report.overall_summary}
                     </ReactMarkdown>
                   </div>
                 </div>
@@ -835,6 +841,32 @@ export default function Reports() {
                   Print / Save as PDF
                 </button>
               </div>
+
+              {/* JSON Output Section */}
+              {(report.final_json || report.json_content) && (
+                <div className="mt-8 border-t pt-6">
+                  <button
+                    onClick={() => setShowJson(!showJson)}
+                    className="text-lg font-semibold text-gray-700 hover:text-encora-green flex items-center"
+                  >
+                    {showJson ? (
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    ) : (
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    )}
+                    View Raw JSON Output
+                  </button>
+                  {showJson && (
+                    <div className="mt-4 bg-gray-900 text-white p-4 rounded-lg overflow-x-auto">
+                      <pre className="text-sm">
+                        <code>
+                          {JSON.stringify(report.final_json || report.json_content, null, 2)}
+                        </code>
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
