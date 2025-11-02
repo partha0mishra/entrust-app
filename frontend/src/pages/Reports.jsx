@@ -162,16 +162,30 @@ export default function Reports() {
       const { default: jsPDF } = await import('jspdf');
       const html2canvas = (await import('html2canvas')).default;
 
-      // Expand all accordion/details elements in the original
+      // Expand all accordion/details elements before cloning
       const allDetails = reportRef.current.querySelectorAll('details');
+      const wasOpen = Array.from(allDetails).map(detail => detail.hasAttribute('open'));
       allDetails.forEach(detail => detail.setAttribute('open', ''));
 
-      // Create a clone of the report content for PDF generation
+      // Wait for any animations/transitions to complete
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Create a clone of the report content
       const content = reportRef.current.cloneNode(true);
 
       // Remove download button from clone
       const buttons = content.querySelectorAll('button');
       buttons.forEach(btn => btn.remove());
+
+      // Remove interactive elements from clone
+      const summaries = content.querySelectorAll('summary');
+      summaries.forEach(summary => {
+        // Convert summary to div to remove interactive behavior
+        const div = document.createElement('div');
+        div.className = summary.className;
+        div.innerHTML = summary.innerHTML;
+        summary.parentNode.replaceChild(div, summary);
+      });
 
       // Create a temporary container
       const tempContainer = document.createElement('div');
@@ -183,25 +197,49 @@ export default function Reports() {
       tempContainer.appendChild(content);
       document.body.appendChild(tempContainer);
 
-      // Generate canvas from HTML
+      // Wait for all images/charts to be loaded
+      const images = tempContainer.querySelectorAll('img, svg');
+      await Promise.all(
+        Array.from(images).map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise(resolve => {
+            img.onload = resolve;
+            img.onerror = resolve; // Continue even if image fails
+            // Timeout after 2 seconds
+            setTimeout(resolve, 2000);
+          });
+        })
+      );
+
+      // Generate canvas from HTML with better quality
       const canvas = await html2canvas(tempContainer, {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        windowWidth: tempContainer.scrollWidth,
+        windowHeight: tempContainer.scrollHeight,
+        onclone: (clonedDoc) => {
+          // Ensure all styles are applied in the cloned document
+          const clonedContainer = clonedDoc.querySelector('div');
+          if (clonedContainer) {
+            clonedContainer.style.width = '210mm';
+            clonedContainer.style.padding = '20px';
+          }
+        }
       });
 
       // Calculate PDF dimensions
       const imgWidth = 210; // A4 width in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
       const pageHeight = 297; // A4 height in mm
-      
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
       const pdf = new jsPDF('p', 'mm', 'a4');
       let heightLeft = imgHeight;
       let position = 0;
 
-      // Add image to PDF (handle multiple pages if needed)
-      const imgData = canvas.toDataURL('image/png');
+      // Add image to PDF (handle multiple pages)
+      const imgData = canvas.toDataURL('image/png', 1.0);
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
@@ -212,16 +250,25 @@ export default function Reports() {
         heightLeft -= pageHeight;
       }
 
-      // Save PDF
-      const safeDimension = selectedDimension.replace(/[^a-zA-Z0-9]/g, '_');
-      const filename = `${customerCode}_${safeDimension}_Report.pdf`;
+      // Save PDF with proper filename
+      const safeDimension = (selectedDimension || 'Report').replace(/[^a-zA-Z0-9]/g, '_');
+      const safeCustomerCode = (customerCode || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
+      const filename = `${safeCustomerCode}_${safeDimension}_Report.pdf`;
       pdf.save(filename);
 
       // Cleanup
       document.body.removeChild(tempContainer);
+
+      // Restore accordion states
+      allDetails.forEach((detail, index) => {
+        if (!wasOpen[index]) {
+          detail.removeAttribute('open');
+        }
+      });
+
     } catch (error) {
       console.error('Failed to generate PDF:', error);
-      alert('Failed to generate PDF. Please ensure you have a stable internet connection.');
+      alert(`Failed to generate PDF: ${error.message}. Please try again or contact support.`);
     } finally {
       setDownloading(false);
     }

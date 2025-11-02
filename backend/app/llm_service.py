@@ -57,7 +57,7 @@ class LLMService:
     async def _call_llm(
         provider,
         messages: List[Dict],
-        max_tokens: int = 500
+        max_tokens: int = 20000
     ) -> str:
         """Helper method to call LLM API using provider"""
         return await provider.call_llm(messages, max_tokens)
@@ -112,7 +112,7 @@ Questions and Responses:
                 ]
 
                 chunk_summary = await LLMService._call_llm(
-                    provider, messages, max_tokens=800
+                    provider, messages, max_tokens=20000
                 )
                 
                 chunk_summaries.append({
@@ -142,7 +142,7 @@ Questions and Responses:
                 ]
 
                 final_summary = await LLMService._call_llm(
-                    provider, messages, max_tokens=1000
+                    provider, messages, max_tokens=20000
                 )
             
             return {
@@ -258,7 +258,7 @@ Format your response in markdown with clear headers and bullet points. Be specif
                 {"role": "user", "content": prompt}
             ]
 
-            content = await LLMService._call_llm(provider, messages, max_tokens=1500)
+            content = await LLMService._call_llm(provider, messages, max_tokens=20000)
 
             return {
                 "success": True,
@@ -337,7 +337,7 @@ Format in markdown with clear headers and bullet points."""
                 {"role": "user", "content": prompt}
             ]
 
-            content = await LLMService._call_llm(provider, messages, max_tokens=800)
+            content = await LLMService._call_llm(provider, messages, max_tokens=20000)
 
             return {
                 "success": True,
@@ -409,7 +409,7 @@ Format in markdown with clear headers and bullet points."""
                 {"role": "user", "content": prompt}
             ]
 
-            content = await LLMService._call_llm(provider, messages, max_tokens=1000)
+            content = await LLMService._call_llm(provider, messages, max_tokens=20000)
 
             return {
                 "success": True,
@@ -477,7 +477,7 @@ Format in markdown with clear headers and bullet points."""
                     ]
 
                     chunk_summary = await LLMService._call_llm(
-                        provider, messages, max_tokens=800
+                        provider, messages, max_tokens=20000
                     )
                     chunk_summaries.append(chunk_summary)
                 
@@ -502,15 +502,15 @@ Use clear markdown formatting with headers, bullet points, and proper line break
                 ]
 
                 final_summary = await LLMService._call_llm(
-                    provider, messages, max_tokens=1200
+                    provider, messages, max_tokens=20000
                 )
-                
+
                 return {
                     "success": True,
                     "content": final_summary,
                     "chunks_processed": len(chunks)
                 }
-            
+
             else:
                 # Single call for smaller content
                 prompt = "Analyze the following dimension summaries and provide an overall organizational data governance assessment:\n\n"
@@ -524,14 +524,14 @@ Use clear markdown formatting with headers, bullet points, and proper line break
 5. **Implementation Approach**: Suggested roadmap
 
 Use markdown formatting with clear headers and bullet points."""
-                
+
                 messages = [
                     {"role": "system", "content": "You are a senior data governance consultant writing a professional executive report. Write in a formal, report-style format suitable for C-level executives. Use third-person perspective. Do NOT use first person (I, we) or ask questions. Do NOT include interactive elements or conversational language. Use markdown formatting."},
                     {"role": "user", "content": prompt}
                 ]
 
                 summary = await LLMService._call_llm(
-                    provider, messages, max_tokens=1200
+                    provider, messages, max_tokens=20000
                 )
                 
                 return {
