@@ -17,7 +17,6 @@ export default function Reports() {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [customerCode, setCustomerCode] = useState(null);
-  const [downloading, setDownloading] = useState(false);
   const reportRef = useRef(null);
   const [customers, setCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -159,71 +158,10 @@ export default function Reports() {
     }
   };
 
-  const handleDownloadPDF = async () => {
-    if (!reportRef.current) return;
-
-    setDownloading(true);
-    try {
-      // Dynamically import jsPDF
-      const { default: jsPDF } = await import('jspdf');
-
-      // Expand all accordion/details elements
-      const allDetails = reportRef.current.querySelectorAll('details');
-      const wasOpen = Array.from(allDetails).map(detail => detail.hasAttribute('open'));
-      allDetails.forEach(detail => detail.setAttribute('open', ''));
-
-      // Wait for accordions to expand
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Create PDF with proper filename
-      const safeDimension = (selectedDimension || 'Report').replace(/[^a-zA-Z0-9]/g, '_');
-      const safeCustomerCode = (customerCode || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
-      const filename = `${safeCustomerCode}_${safeDimension}_Report.pdf`;
-
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
-      });
-
-      // Use jsPDF's html method - more reliable than html2canvas
-      await pdf.html(reportRef.current, {
-        callback: function (doc) {
-          doc.save(filename);
-        },
-        x: 10,
-        y: 10,
-        width: 190, // A4 width minus margins
-        windowWidth: 800, // Virtual window width for rendering
-        html2canvas: {
-          scale: 0.8, // Lower scale for better compatibility
-          useCORS: true,
-          allowTaint: true,
-          logging: false,
-          backgroundColor: '#ffffff',
-          imageTimeout: 0, // No timeout
-          removeContainer: true
-        },
-        autoPaging: 'text', // Better page breaks
-        margin: [10, 10, 10, 10]
-      });
-
-      // Restore accordion states
-      allDetails.forEach((detail, index) => {
-        if (!wasOpen[index]) {
-          detail.removeAttribute('open');
-        }
-      });
-
-    } catch (error) {
-      console.error('PDF Generation Error:', error);
-      console.error('Error details:', error.stack);
-
-      alert('Failed to generate PDF. Please try using your browser\'s Print function (Ctrl+P or Cmd+P) and select "Save as PDF" instead.');
-    } finally {
-      setDownloading(false);
-    }
+  const handleDownloadPDF = () => {
+    // Use browser's native print dialog which produces perfect quality PDFs
+    // User can choose "Save as PDF" as the destination
+    window.print();
   };
 
   // Custom markdown components for better rendering
@@ -463,30 +401,7 @@ export default function Reports() {
               <div className="mt-6 flex flex-wrap gap-4">
                 <button
                   onClick={handleDownloadPDF}
-                  disabled={downloading}
-                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center shadow-md hover:shadow-lg transition"
-                >
-                  {downloading ? (
-                    <>
-                      <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Generating PDF...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Download PDF
-                    </>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => window.print()}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center shadow-md hover:shadow-lg transition"
+                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center shadow-md hover:shadow-lg transition"
                 >
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -810,30 +725,7 @@ export default function Reports() {
               <div className="mt-6 flex flex-wrap gap-4">
                 <button
                   onClick={handleDownloadPDF}
-                  disabled={downloading}
-                  className="px-6 py-3 bg-encora-green text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center shadow-md hover:shadow-lg transition"
-                >
-                  {downloading ? (
-                    <>
-                      <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Generating PDF...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Download PDF
-                    </>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => window.print()}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center shadow-md hover:shadow-lg transition"
+                  className="px-6 py-3 bg-encora-green text-white rounded-lg hover:bg-green-600 flex items-center shadow-md hover:shadow-lg transition"
                 >
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -874,6 +766,12 @@ export default function Reports() {
     </div>
     <style>{`
       @media print {
+        /* Page setup */
+        @page {
+          size: A4;
+          margin: 1.5cm;
+        }
+
         /* Page break control */
         .page-break {
           page-break-before: auto;
@@ -885,38 +783,63 @@ export default function Reports() {
           break-inside: avoid;
         }
 
-        /* Expand all accordions for printing */
+        /* Force all accordions to be open and display all content */
         details {
           display: block !important;
+          page-break-inside: avoid;
         }
 
+        /* Force details to show all content, not just when open */
+        details > * {
+          display: block !important;
+        }
+
+        /* Style accordion titles as section headers */
         details summary {
           display: block !important;
-          list-style: none;
+          list-style: none !important;
           page-break-after: avoid;
-          font-weight: 600;
-          margin-bottom: 0.5rem;
+          font-weight: 700 !important;
+          font-size: 1.1em !important;
+          margin-top: 1.5rem !important;
+          margin-bottom: 0.75rem !important;
+          padding: 0.75rem 1rem !important;
           background-color: #f3f4f6 !important;
-          padding: 0.75rem !important;
-          border-radius: 0.5rem;
+          border-left: 4px solid #10b981 !important;
+          color: #1f2937 !important;
         }
 
-        details summary::-webkit-details-marker {
-          display: none;
+        /* Remove the disclosure triangle */
+        details summary::-webkit-details-marker,
+        details summary::marker {
+          display: none !important;
         }
 
-        details[open] summary ~ * {
+        /* Show accordion content */
+        details summary ~ * {
           display: block !important;
         }
 
         .print-content {
+          display: block !important;
           page-break-inside: avoid;
           padding: 1rem !important;
+          margin-bottom: 1rem !important;
+        }
+
+        /* Accordion section styling */
+        .accordion-section {
+          border: 1px solid #e5e7eb !important;
+          border-radius: 0.5rem !important;
+          margin-bottom: 1.5rem !important;
+          page-break-inside: avoid;
         }
 
         /* Table improvements for print */
         table {
           page-break-inside: auto;
+          border-collapse: collapse !important;
+          width: 100% !important;
         }
 
         tr {
@@ -932,10 +855,16 @@ export default function Reports() {
           display: table-footer-group;
         }
 
+        th, td {
+          border: 1px solid #d1d5db !important;
+          padding: 0.5rem !important;
+        }
+
         /* Chart containers */
         .recharts-wrapper,
         svg {
           page-break-inside: avoid;
+          max-width: 100% !important;
         }
 
         /* Hide interactive elements */
@@ -943,15 +872,69 @@ export default function Reports() {
           display: none !important;
         }
 
-        /* Better spacing */
-        h2, h3, h4 {
-          page-break-after: avoid;
+        /* Hide breadcrumb and navigation */
+        nav {
+          display: none !important;
         }
 
-        /* Ensure borders show in print */
+        /* Better spacing for headings */
+        h1, h2, h3, h4, h5, h6 {
+          page-break-after: avoid;
+          page-break-inside: avoid;
+        }
+
+        h1 {
+          margin-top: 0 !important;
+          margin-bottom: 1.5rem !important;
+        }
+
+        h2 {
+          margin-top: 1.5rem !important;
+          margin-bottom: 1rem !important;
+        }
+
+        h3 {
+          margin-top: 1.25rem !important;
+          margin-bottom: 0.75rem !important;
+        }
+
+        /* Ensure backgrounds and colors print correctly */
         * {
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+        }
+
+        /* Better text rendering */
+        body {
+          font-size: 11pt !important;
+          line-height: 1.5 !important;
+          color: #000 !important;
+        }
+
+        /* Improve prose rendering */
+        .prose p {
+          margin-bottom: 0.75rem !important;
+        }
+
+        .prose ul, .prose ol {
+          margin-bottom: 0.75rem !important;
+          padding-left: 1.5rem !important;
+        }
+
+        .prose li {
+          margin-bottom: 0.25rem !important;
+        }
+
+        /* Stats cards */
+        .grid {
+          display: grid !important;
+        }
+
+        /* Fix word cloud and charts */
+        canvas {
+          max-width: 100% !important;
+          page-break-inside: avoid;
         }
       }
     `}</style></>
