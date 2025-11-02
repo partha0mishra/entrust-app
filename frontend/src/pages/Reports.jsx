@@ -168,7 +168,7 @@ export default function Reports() {
       allDetails.forEach(detail => detail.setAttribute('open', ''));
 
       // Wait for any animations/transitions to complete
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Create a clone of the report content
       const content = reportRef.current.cloneNode(true);
@@ -197,28 +197,74 @@ export default function Reports() {
       tempContainer.appendChild(content);
       document.body.appendChild(tempContainer);
 
-      // Wait for all images/charts to be loaded
-      const images = tempContainer.querySelectorAll('img, svg');
-      await Promise.all(
-        Array.from(images).map(img => {
-          if (img.complete) return Promise.resolve();
-          return new Promise(resolve => {
-            img.onload = resolve;
-            img.onerror = resolve; // Continue even if image fails
-            // Timeout after 2 seconds
-            setTimeout(resolve, 2000);
-          });
-        })
-      );
+      // Wait a bit more for SVG charts to fully render
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Generate canvas from HTML with better quality
+      // Convert all SVG elements to img elements for better compatibility
+      const svgElements = tempContainer.querySelectorAll('svg');
+      for (const svg of svgElements) {
+        try {
+          // Get SVG dimensions
+          const svgRect = svg.getBoundingClientRect();
+          const svgWidth = svgRect.width || svg.getAttribute('width') || 800;
+          const svgHeight = svgRect.height || svg.getAttribute('height') || 400;
+
+          // Serialize SVG to string
+          const svgData = new XMLSerializer().serializeToString(svg);
+          const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+          const svgUrl = URL.createObjectURL(svgBlob);
+
+          // Create canvas to convert SVG to PNG
+          const canvas = document.createElement('canvas');
+          canvas.width = svgWidth * 2; // 2x for better quality
+          canvas.height = svgHeight * 2;
+          const ctx = canvas.getContext('2d');
+
+          // Create image from SVG
+          const img = new Image();
+          await new Promise((resolve, reject) => {
+            img.onload = () => {
+              ctx.scale(2, 2);
+              ctx.drawImage(img, 0, 0);
+              URL.revokeObjectURL(svgUrl);
+              resolve();
+            };
+            img.onerror = () => {
+              URL.revokeObjectURL(svgUrl);
+              reject(new Error('Failed to load SVG'));
+            };
+            img.src = svgUrl;
+          });
+
+          // Convert canvas to image element
+          const pngDataUrl = canvas.toDataURL('image/png');
+          const imgElement = document.createElement('img');
+          imgElement.src = pngDataUrl;
+          imgElement.style.width = `${svgWidth}px`;
+          imgElement.style.height = `${svgHeight}px`;
+          imgElement.style.display = 'block';
+
+          // Replace SVG with IMG
+          svg.parentNode.replaceChild(imgElement, svg);
+        } catch (err) {
+          console.warn('Failed to convert SVG to image:', err);
+          // Leave SVG as is if conversion fails
+        }
+      }
+
+      // Wait for replaced images to load
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Generate canvas from HTML with optimized settings
       const canvas = await html2canvas(tempContainer, {
-        scale: 2,
+        scale: 1.5, // Reduced from 2 for better performance
         useCORS: true,
+        allowTaint: true,
         logging: false,
         backgroundColor: '#ffffff',
         windowWidth: tempContainer.scrollWidth,
         windowHeight: tempContainer.scrollHeight,
+        imageTimeout: 15000,
         onclone: (clonedDoc) => {
           // Ensure all styles are applied in the cloned document
           const clonedContainer = clonedDoc.querySelector('div');
@@ -229,6 +275,14 @@ export default function Reports() {
         }
       });
 
+      // Cleanup temp container
+      document.body.removeChild(tempContainer);
+
+      // Validate canvas
+      if (!canvas || canvas.width === 0 || canvas.height === 0) {
+        throw new Error('Canvas generation failed - invalid dimensions');
+      }
+
       // Calculate PDF dimensions
       const imgWidth = 210; // A4 width in mm
       const pageHeight = 297; // A4 height in mm
@@ -238,8 +292,20 @@ export default function Reports() {
       let heightLeft = imgHeight;
       let position = 0;
 
+      // Convert canvas to image data with error handling
+      let imgData;
+      try {
+        imgData = canvas.toDataURL('image/png', 0.95);
+
+        // Validate the data URL
+        if (!imgData || imgData === 'data:,' || imgData.length < 100) {
+          throw new Error('Invalid image data generated');
+        }
+      } catch (err) {
+        throw new Error(`Failed to convert canvas to image: ${err.message}`);
+      }
+
       // Add image to PDF (handle multiple pages)
-      const imgData = canvas.toDataURL('image/png', 1.0);
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
@@ -256,9 +322,6 @@ export default function Reports() {
       const filename = `${safeCustomerCode}_${safeDimension}_Report.pdf`;
       pdf.save(filename);
 
-      // Cleanup
-      document.body.removeChild(tempContainer);
-
       // Restore accordion states
       allDetails.forEach((detail, index) => {
         if (!wasOpen[index]) {
@@ -267,8 +330,22 @@ export default function Reports() {
       });
 
     } catch (error) {
-      console.error('Failed to generate PDF:', error);
-      alert(`Failed to generate PDF: ${error.message}. Please try again or contact support.`);
+      console.error('PDF Generation Error:', error);
+      console.error('Error stack:', error.stack);
+
+      let errorMessage = 'Failed to generate PDF. ';
+
+      if (error.message.includes('PNG')) {
+        errorMessage += 'There was an issue rendering charts. Try viewing the report in a different browser or contact support.';
+      } else if (error.message.includes('canvas')) {
+        errorMessage += 'The report content could not be captured. Please try again.';
+      } else if (error.message.includes('memory')) {
+        errorMessage += 'The report is too large. Try generating reports for individual dimensions.';
+      } else {
+        errorMessage += error.message || 'Please try again or contact support.';
+      }
+
+      alert(errorMessage);
     } finally {
       setDownloading(false);
     }
