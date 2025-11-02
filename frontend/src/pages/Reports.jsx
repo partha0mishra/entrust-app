@@ -276,6 +276,7 @@ export default function Reports() {
   };
 
   return (
+    <>
     <div>
       <Breadcrumb 
         items={[{ label: 'Reports' }]}
@@ -908,6 +909,6 @@ export default function Reports() {
           print-color-adjust: exact;
         }
       }
-    `}</style>
+    `}</style></>
   );
 }
