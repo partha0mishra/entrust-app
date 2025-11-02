@@ -158,169 +158,50 @@ export default function Reports() {
 
     setDownloading(true);
     try {
-      // Dynamically import jsPDF and html2canvas
+      // Dynamically import jsPDF
       const { default: jsPDF } = await import('jspdf');
-      const html2canvas = (await import('html2canvas')).default;
 
-      // Expand all accordion/details elements before cloning
+      // Expand all accordion/details elements
       const allDetails = reportRef.current.querySelectorAll('details');
       const wasOpen = Array.from(allDetails).map(detail => detail.hasAttribute('open'));
       allDetails.forEach(detail => detail.setAttribute('open', ''));
 
-      // Wait for any animations/transitions to complete
+      // Wait for accordions to expand
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      // Create a clone of the report content
-      const content = reportRef.current.cloneNode(true);
-
-      // Remove download button from clone
-      const buttons = content.querySelectorAll('button');
-      buttons.forEach(btn => btn.remove());
-
-      // Remove interactive elements from clone
-      const summaries = content.querySelectorAll('summary');
-      summaries.forEach(summary => {
-        // Convert summary to div to remove interactive behavior
-        const div = document.createElement('div');
-        div.className = summary.className;
-        div.innerHTML = summary.innerHTML;
-        summary.parentNode.replaceChild(div, summary);
-      });
-
-      // Create a temporary container
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.width = '210mm'; // A4 width
-      tempContainer.style.padding = '20px';
-      tempContainer.style.backgroundColor = 'white';
-      tempContainer.appendChild(content);
-      document.body.appendChild(tempContainer);
-
-      // Wait a bit more for SVG charts to fully render
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Convert all SVG elements to img elements for better compatibility
-      const svgElements = tempContainer.querySelectorAll('svg');
-      for (const svg of svgElements) {
-        try {
-          // Get SVG dimensions
-          const svgRect = svg.getBoundingClientRect();
-          const svgWidth = svgRect.width || svg.getAttribute('width') || 800;
-          const svgHeight = svgRect.height || svg.getAttribute('height') || 400;
-
-          // Serialize SVG to string
-          const svgData = new XMLSerializer().serializeToString(svg);
-          const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-          const svgUrl = URL.createObjectURL(svgBlob);
-
-          // Create canvas to convert SVG to PNG
-          const canvas = document.createElement('canvas');
-          canvas.width = svgWidth * 2; // 2x for better quality
-          canvas.height = svgHeight * 2;
-          const ctx = canvas.getContext('2d');
-
-          // Create image from SVG
-          const img = new Image();
-          await new Promise((resolve, reject) => {
-            img.onload = () => {
-              ctx.scale(2, 2);
-              ctx.drawImage(img, 0, 0);
-              URL.revokeObjectURL(svgUrl);
-              resolve();
-            };
-            img.onerror = () => {
-              URL.revokeObjectURL(svgUrl);
-              reject(new Error('Failed to load SVG'));
-            };
-            img.src = svgUrl;
-          });
-
-          // Convert canvas to image element
-          const pngDataUrl = canvas.toDataURL('image/png');
-          const imgElement = document.createElement('img');
-          imgElement.src = pngDataUrl;
-          imgElement.style.width = `${svgWidth}px`;
-          imgElement.style.height = `${svgHeight}px`;
-          imgElement.style.display = 'block';
-
-          // Replace SVG with IMG
-          svg.parentNode.replaceChild(imgElement, svg);
-        } catch (err) {
-          console.warn('Failed to convert SVG to image:', err);
-          // Leave SVG as is if conversion fails
-        }
-      }
-
-      // Wait for replaced images to load
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Generate canvas from HTML with optimized settings
-      const canvas = await html2canvas(tempContainer, {
-        scale: 1.5, // Reduced from 2 for better performance
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        windowWidth: tempContainer.scrollWidth,
-        windowHeight: tempContainer.scrollHeight,
-        imageTimeout: 15000,
-        onclone: (clonedDoc) => {
-          // Ensure all styles are applied in the cloned document
-          const clonedContainer = clonedDoc.querySelector('div');
-          if (clonedContainer) {
-            clonedContainer.style.width = '210mm';
-            clonedContainer.style.padding = '20px';
-          }
-        }
-      });
-
-      // Cleanup temp container
-      document.body.removeChild(tempContainer);
-
-      // Validate canvas
-      if (!canvas || canvas.width === 0 || canvas.height === 0) {
-        throw new Error('Canvas generation failed - invalid dimensions');
-      }
-
-      // Calculate PDF dimensions
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      // Convert canvas to image data with error handling
-      let imgData;
-      try {
-        imgData = canvas.toDataURL('image/png', 0.95);
-
-        // Validate the data URL
-        if (!imgData || imgData === 'data:,' || imgData.length < 100) {
-          throw new Error('Invalid image data generated');
-        }
-      } catch (err) {
-        throw new Error(`Failed to convert canvas to image: ${err.message}`);
-      }
-
-      // Add image to PDF (handle multiple pages)
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      // Save PDF with proper filename
+      // Create PDF with proper filename
       const safeDimension = (selectedDimension || 'Report').replace(/[^a-zA-Z0-9]/g, '_');
       const safeCustomerCode = (customerCode || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
       const filename = `${safeCustomerCode}_${safeDimension}_Report.pdf`;
-      pdf.save(filename);
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+
+      // Use jsPDF's html method - more reliable than html2canvas
+      await pdf.html(reportRef.current, {
+        callback: function (doc) {
+          doc.save(filename);
+        },
+        x: 10,
+        y: 10,
+        width: 190, // A4 width minus margins
+        windowWidth: 800, // Virtual window width for rendering
+        html2canvas: {
+          scale: 0.8, // Lower scale for better compatibility
+          useCORS: true,
+          allowTaint: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          imageTimeout: 0, // No timeout
+          removeContainer: true
+        },
+        autoPaging: 'text', // Better page breaks
+        margin: [10, 10, 10, 10]
+      });
 
       // Restore accordion states
       allDetails.forEach((detail, index) => {
@@ -331,21 +212,9 @@ export default function Reports() {
 
     } catch (error) {
       console.error('PDF Generation Error:', error);
-      console.error('Error stack:', error.stack);
+      console.error('Error details:', error.stack);
 
-      let errorMessage = 'Failed to generate PDF. ';
-
-      if (error.message.includes('PNG')) {
-        errorMessage += 'There was an issue rendering charts. Try viewing the report in a different browser or contact support.';
-      } else if (error.message.includes('canvas')) {
-        errorMessage += 'The report content could not be captured. Please try again.';
-      } else if (error.message.includes('memory')) {
-        errorMessage += 'The report is too large. Try generating reports for individual dimensions.';
-      } else {
-        errorMessage += error.message || 'Please try again or contact support.';
-      }
-
-      alert(errorMessage);
+      alert('Failed to generate PDF. Please try using your browser\'s Print function (Ctrl+P or Cmd+P) and select "Save as PDF" instead.');
     } finally {
       setDownloading(false);
     }
@@ -585,8 +454,8 @@ export default function Reports() {
                 </div>
               )}
 
-              <div className="mt-6 flex space-x-4">
-                <button 
+              <div className="mt-6 flex flex-wrap gap-4">
+                <button
                   onClick={handleDownloadPDF}
                   disabled={downloading}
                   className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center shadow-md hover:shadow-lg transition"
@@ -595,7 +464,7 @@ export default function Reports() {
                     <>
                       <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
                       Generating PDF...
                     </>
@@ -607,6 +476,16 @@ export default function Reports() {
                       Download PDF
                     </>
                   )}
+                </button>
+
+                <button
+                  onClick={() => window.print()}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center shadow-md hover:shadow-lg transition"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                  Print / Save as PDF
                 </button>
               </div>
             </>
@@ -922,7 +801,7 @@ export default function Reports() {
                 </div>
               </div>
 
-              <div className="mt-6 flex space-x-4">
+              <div className="mt-6 flex flex-wrap gap-4">
                 <button
                   onClick={handleDownloadPDF}
                   disabled={downloading}
@@ -944,6 +823,16 @@ export default function Reports() {
                       Download PDF
                     </>
                   )}
+                </button>
+
+                <button
+                  onClick={() => window.print()}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center shadow-md hover:shadow-lg transition"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                  Print / Save as PDF
                 </button>
               </div>
             </>
