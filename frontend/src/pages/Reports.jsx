@@ -159,9 +159,27 @@ export default function Reports() {
   };
 
   const handleDownloadPDF = () => {
-    // Use browser's native print dialog which produces perfect quality PDFs
-    // User can choose "Save as PDF" as the destination
-    window.print();
+    // Find all accordion/details elements and open them before printing
+    const allDetails = document.querySelectorAll('details');
+    const wasOpen = Array.from(allDetails).map(detail => detail.hasAttribute('open'));
+
+    // Open all accordions
+    allDetails.forEach(detail => detail.setAttribute('open', ''));
+
+    // Small delay to ensure DOM updates before print dialog
+    setTimeout(() => {
+      // Use browser's native print dialog which produces perfect quality PDFs
+      window.print();
+
+      // Restore accordion states after a short delay
+      setTimeout(() => {
+        allDetails.forEach((detail, index) => {
+          if (!wasOpen[index]) {
+            detail.removeAttribute('open');
+          }
+        });
+      }, 100);
+    }, 100);
   };
 
   // Custom markdown components for better rendering
