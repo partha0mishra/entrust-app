@@ -3,6 +3,23 @@ from typing import List, Dict, Optional
 import json
 from .llm_providers import get_llm_provider
 import re
+from .prompts import (
+    PROMPT_ADD_ON,
+    DEFAULT_SYSTEM_PROMPT,
+    DEFAULT_USER_PROMPT_TEMPLATE,
+    DIMENSION_PROMPTS,
+    get_deep_dimension_analysis_prompt,
+    get_facet_analysis_prompt,
+    get_comment_analysis_prompt,
+    DEEP_DIMENSION_ANALYSIS_SYSTEM_PROMPT,
+    FACET_ANALYSIS_SYSTEM_PROMPT,
+    COMMENT_ANALYSIS_SYSTEM_PROMPT,
+    get_overall_summary_chunked_prompt,
+    get_overall_summary_consolidation_prompt,
+    get_overall_summary_single_prompt,
+    OVERALL_SUMMARY_SYSTEM_PROMPT,
+    CONSOLIDATION_SYSTEM_PROMPT
+)
 
 class LLMService:
     # Approximate token estimation: ~4 characters per token
@@ -107,935 +124,15 @@ class LLMService:
 
             # Process each chunk
             for i, chunk in enumerate(chunks):
-                chunk_prompt = f"""Analyze the following survey responses for the {dimension} dimension (Part {i+1} of {len(chunks)}):
-
-Questions and Responses:
-"""
-
-                prompt_add_on = """## PROMPT ADD-ON
-You are a senior data governance consultant.
-**DEEP DRILL-DOWN REQUIRED**:
-**Step 1**: Compute stats (avg, % high/low) by Category, Process, Lifecycle Stage.
-**Step 2**: Draft tables.
-**Step 3**: Write observations with evidence.
-**Step 4**: Prioritize actions (Risk × Impact).
-**Step 5**: 
-- For **every Category, Process, and Lifecycle Stage**, provide:
-  - Full score breakdown
-  - All comments (with sentiment/theme)
-  - 3–6 **best practices** (cite DAMA, GDPR, ISO 8000, NIST)
-  - 3–6 **observations**
-  - 3–6 **areas for improvement**
-  - 3–8 **action items** (priority, owner, tool, timeline, framework)
-- **Do not summarize** — be exhaustive.
-- **Cite Q# everywhere**.
-- **Self-score depth ≥ 9** or revise.
-
----
-"""                
-                system_prompt = prompt_add_on + "You are a data governance expert writing a professional report analyzing survey responses with scores on a 1-10 scale. Write in a formal, report-style format suitable for executive review. Use third-person perspective. DO NOT use first person (I, we) or ask questions. DO NOT include interactive elements like 'Let me analyze' or 'Would you like'. Provide clear, actionable insights in markdown format with proper headers, bullet points, and line breaks."
-                user_prompt_template = """
-Provide a concise summary of the current state and actionable suggestions for improvement.
-"""
-
-                if dimension == "Data Privacy & Compliance":
-                    system_prompt = prompt_add_on + "You are a **senior data management consultant** specializing in Data Privacy & Compliance. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score (on a 1-10 scale), Comment, Category, Process, and Lifecycle Stage."
-                    user_prompt_template = """
-Generate a report with the following sections based on the provided survey data. 
-Use clear headings, tables, and bullet points for optimal readability.
-
-
-# Data Privacy & Compliance – Survey Analysis Report
-
-### 1. Executive Summary
-- Average score & distribution
-- Top 3 themes from comments
-- Overall maturity level (High / Medium / Low)
-
-### 2. Performance by Category
-- Create a table with columns: **Category**, Avg Score, % High (8–10), % Low (1–4), Key Comment Themes
-- Highlight top-performing and at-risk categories
-
-### 3. Performance by Process
-- Create a table with columns: **Process**, Avg Score, Key Gaps, Recommended Tools/Methods
-
-### 4. Performance by Lifecycle Stage
-- Visualize maturity progression (e.g., strong in Monitoring, weak in Prevention)
-
-### 5. Strategic Observations
-- 3–5 bullet points with **consultative insights**
-- Link survey findings to industry frameworks (e.g., GDPR, CCPA, ISO 27701, NIST Privacy)
-
-### 6. Prioritized Action Plan
-- Create a table with columns: Priority, Action Item, Owner, Timeline, Expected Outcome
-- Provide at least one 'High' priority action.
-
-### 7. Risk Spotlight
-- Identify critical risks (e.g., non-compliance, breach exposure)
-- Assign a mitigation urgency: Immediate / Short-term / Long-term
-
-### DEEP DRILL-DOWN REQUIRED ###
-
-### Analysis for every category
-
-###  Current State  
-- **Overall Mean Score**: [Calculate from all responses]  
-- **Median Score**: [Calculate]  
-- **% of Scores ≥7**: [Calculate]  
-- **% of Scores ≤3**: [Calculate]  
-- **Maturity Level**: [Critical / Low / Medium / High / Excellent]  
-- **Executive Summary (3–6 bullets)**:  
-  - Each bullet must cite a score, % or comment  
-  - Link to a framework (DAMA-DMBOK, GDPR, ISO 8000, NIST, etc.)  
-  - Be consultative and forward-looking  
-
----
-
-###  Analysis by Category  
-For **each Category** (e.g., Accuracy, Completeness, Timeliness):  
-
-| Category | Avg Score | % High (8–10) | % Low (1–4) | Questions |
-|---------|-----------|---------------|-------------|---------|
-| ...     | ...       | ...           | ...         | Q1, Q7  |
-
-####  [Category Name] — Deep Analysis  
-- **Score Breakdown**: Avg = X.X, Min = X, Max = X  
-- **Comment Analysis** (quote 3–5 key comments):  
-  - "Quote" → [Sentiment: Positive/Negative] → [Theme: e.g., Manual Entry]  
-- **Best Practices (3–6)**:  
-  - Cite DAMA-DMBOK, ISO 8000, GDPR Art. 5(1)(d), etc.  
-- **Observations (3–6)**:  
-  - Link survey evidence to gaps  
-- **Areas for Improvement (3–6)**:  
-  - Be specific and technical  
-- **Action Items (3–8)**:  
-  | Action | Priority | Owner | Timeline | Tool Example | Framework Ref |
-  |-------|----------|-------|----------|--------------|---------------|
-  | ...   | High     | Data Eng | Q1 2026  | Great Expectations | DAMA-DMBOK #3 |
-
----
-*** DEEP DRILL-DOWN REQUIRED ***
-###  Analysis by Process  
-For **each Process** (e.g., Data Ingestion, Cleansing, Monitoring):  
-
-| Process | Avg Score | Key Gaps (3–5) | Recommended Tools |
-|--------|-----------|----------------|-------------------|
-| ...    | ...       | ...            | ...               |
-
-####  [Process Name] — Deep Analysis  
-- **Score & Questions**: List Q#s, avg score  
-- **Comment Analysis**: Quote + sentiment + theme  
-- **Best Practices (3–6)**  
-- **Observations (3–6)**  
-- **Areas for Improvement (3–6)**  
-- **Action Items (3–8)**: Same table format  
-
----
-### DEEP DRILL-DOWN REQUIRED ###
-###   Analysis by Lifecycle Stage  
-For **each Stage** (e.g., Creation, Usage, Archival):  
-
-| Stage | Avg Score | Maturity Note |
-|-------|-----------|----------------|
-| ...   | ...       | Strong in monitoring, weak in prevention |
-
-####  [Stage Name] — Deep Analysis  
-- **Score Trend**: Compare to other stages  
-- **Comment Analysis**  
-- **Best Practices (3–6)**  
-- **Observations (3–6)**  
-- **Areas for Improvement (3–6)**  
-- **Action Items (3–8)**  
-
----
-
-###  Priority Actions (Risk × Impact)  
-| Rank | Initiative | Risk Severity | Business Impact | RICE Score | Linked Qs |
-|------|------------|---------------|-----------------|------------|----------|
-| 1    | Deploy cross-system reconciliation | High | High | 9 | Q1, Q16 |
-
-- **RICE Score** = (Reach × Impact × Confidence) ÷ Effort  
-- **Top 3 must be High priority**  
-- **Phrase as "Initiative"** (e.g., "Embed data quality criteria in SDLC acceptance checkpoints")
-
----
-
-###  Actionable Improvement Suggestions  
-- **One concrete, tool-enabled fix per major gap**  
-- **Format**:  
-  **→ [Gap Title]**  
-  - **Recommendation**: [Detailed]  
-  - **Tool Example**: Great Expectations, Apache Deequ, Collibra  
-  - **Owner Role**: Data Steward, CDO  
-  - **Timeline**: Immediate / Q1 / Q2 / Long-term  
-  - **Framework Reference**: DAMA-DMBOK, ISO 8000-8  
-  - **Expected ROI**: Reduce error rate by 60%, save $XM  
-
----
-
-###  Strategic Observations  
-- **4–8 bullets**  
-- Each must:  
-  - Cite a survey finding (Q# + score)  
-  - Link to a framework  
-  - Offer a strategic insight  
-- Example:  
-  > "Q1 score=4 indicates no automated reconciliation — violates **DAMA-DMBOK Principle #3 (Accuracy)** and increases **GDPR Art. 5(1)(d)** risk."
-
----
-
-###  Question-Level Analysis  
-| Q# | Question | Category | Process | Stage | Responses | Min | Max | Avg | Comments |
-|----|---------|----------|---------|-------|-----------|-----|-----|-----|----------|
-| Q1 | Are automated reconciliation checks... | Accuracy | Ingestion | Creation | 1 | 4 | 4 | 4 | "Dates flip formats" |
-
-- **Include all  questions**  
-- **Quote 1–2 comments per low-scoring Q (<5)**  
-
----
-
-###  Risk Spotlight  
-| Risk | Severity | Regulatory Risk | Mitigation Urgency | Linked Qs |
-|------|----------|-----------------|---------------------|----------|
-| Inaccurate billing data | Critical | GDPR Art. 5(1)(d) | Immediate | Q1, Q7 |
-
-- **At least 3 risks**  
-- **Severity**: Critical / High / Medium / Low  
-- **Urgency**: Immediate / Short-term / Long-term  
-
----
-
-###  Self-Assessment (AI Quality Gate)  
-- **Clarity**: [1–10]  
-- **Actionability**: [1–10]  
-- **Evidence-Based**: [1–10]  
-- **Framework Alignment**: [1–10]  
-- **Depth of Analysis**: [1–10]  
-- **Average Score**: [X.X]  
-- **Revision Needed?**: Yes / No  
-- **Revision Notes**: [If <8.5, explain what to fix]
-
-### REPLY ONLY IN MARKDOWN FORMAT ###
-### END OF PROMPT ###
----
-"""
-                elif dimension == "Data Ethics & Bias":
-                    system_prompt = prompt_add_on + "You are a **senior data management consultant** specializing in Data Ethics & Bias. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score (on a 1-10 scale), Comment, Category, Process, and Lifecycle Stage."
-                    user_prompt_template = """
-Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
-
-# Data Ethics & Bias – Survey Analysis Report
-
-### 1. Executive Summary
-- Average score & distribution
-- Top 3 themes from comments
-- Overall maturity level (High / Medium / Low)
-
-### 2. Performance by Category
-- Create a table with columns: **Category**, Avg Score, % High (8–10), % Low (1–4), Key Comment Themes
-- Highlight top-performing and at-risk categories
-
-### 3. Performance by Process
-- Create a table with columns: **Process**, Avg Score, Key Gaps, Recommended Tools/Methods
-
-### 4. Performance by Lifecycle Stage
-- Visualize maturity progression (e.g., strong in Monitoring, weak in Prevention)
-
-### 5. Strategic Observations
-- 3–5 bullet points with **consultative insights**
-- Link survey findings to industry frameworks (e.g., AI Ethics Guidelines, IEEE Ethically Aligned Design)
-
-### 6. Prioritized Action Plan
-- Create a table with columns: Priority, Action Item, Owner, Timeline, Expected Outcome
-- Provide at least one 'High' priority action.
-
-### 7. Risk Spotlight
-- Identify critical risks (e.g., bias amplification, ethical lapses)
-- Assign a mitigation urgency: Immediate / Short-term / Long-term
-
-### DEEP DRILL-DOWN REQUIRED ###
-
-### Analysis for every category
-
-###  Current State  
-- **Overall Mean Score**: [Calculate from all responses]  
-- **Median Score**: [Calculate]  
-- **% of Scores ≥7**: [Calculate]  
-- **% of Scores ≤3**: [Calculate]  
-- **Maturity Level**: [Critical / Low / Medium / High / Excellent]  
-- **Executive Summary (3–6 bullets)**:  
-  - Each bullet must cite a score, % or comment  
-  - Link to a framework (DAMA-DMBOK, GDPR, ISO 8000, NIST, etc.)  
-  - Be consultative and forward-looking  
-
----
-
-###  Analysis by Category  
-For **each Category** (e.g., Accuracy, Completeness, Timeliness):  
-
-| Category | Avg Score | % High (8–10) | % Low (1–4) | Questions |
-|---------|-----------|---------------|-------------|---------|
-| ...     | ...       | ...           | ...         | Q1, Q7  |
-
-####  [Category Name] — Deep Analysis  
-- **Score Breakdown**: Avg = X.X, Min = X, Max = X  
-- **Comment Analysis** (quote 3–5 key comments):  
-  - "Quote" → [Sentiment: Positive/Negative] → [Theme: e.g., Manual Entry]  
-- **Best Practices (3–6)**:  
-  - Cite DAMA-DMBOK, ISO 8000, GDPR Art. 5(1)(d), etc.  
-- **Observations (3–6)**:  
-  - Link survey evidence to gaps  
-- **Areas for Improvement (3–6)**:  
-  - Be specific and technical  
-- **Action Items (3–8)**:  
-  | Action | Priority | Owner | Timeline | Tool Example | Framework Ref |
-  |-------|----------|-------|----------|--------------|---------------|
-  | ...   | High     | Data Eng | Q1 2026  | Great Expectations | DAMA-DMBOK #3 |
-
----
-*** DEEP DRILL-DOWN REQUIRED ***
-###  Analysis by Process  
-For **each Process** (e.g., Data Ingestion, Cleansing, Monitoring):  
-
-| Process | Avg Score | Key Gaps (3–5) | Recommended Tools |
-|--------|-----------|----------------|-------------------|
-| ...    | ...       | ...            | ...               |
-
-####  [Process Name] — Deep Analysis  
-- **Score & Questions**: List Q#s, avg score  
-- **Comment Analysis**: Quote + sentiment + theme  
-- **Best Practices (3–6)**  
-- **Observations (3–6)**  
-- **Areas for Improvement (3–6)**  
-- **Action Items (3–8)**: Same table format  
-
----
-### DEEP DRILL-DOWN REQUIRED ###
-###   Analysis by Lifecycle Stage  
-For **each Stage** (e.g., Creation, Usage, Archival):  
-
-| Stage | Avg Score | Maturity Note |
-|-------|-----------|----------------|
-| ...   | ...       | Strong in monitoring, weak in prevention |
-
-####  [Stage Name] — Deep Analysis  
-- **Score Trend**: Compare to other stages  
-- **Comment Analysis**  
-- **Best Practices (3–6)**  
-- **Observations (3–6)**  
-- **Areas for Improvement (3–6)**  
-- **Action Items (3–8)**  
-
----
-
-###  Priority Actions (Risk × Impact)  
-| Rank | Initiative | Risk Severity | Business Impact | RICE Score | Linked Qs |
-|------|------------|---------------|-----------------|------------|----------|
-| 1    | Deploy cross-system reconciliation | High | High | 9 | Q1, Q16 |
-
-- **RICE Score** = (Reach × Impact × Confidence) ÷ Effort  
-- **Top 3 must be High priority**  
-- **Phrase as "Initiative"** (e.g., "Embed data quality criteria in SDLC acceptance checkpoints")
-
----
-
-###  Actionable Improvement Suggestions  
-- **One concrete, tool-enabled fix per major gap**  
-- **Format**:  
-  **→ [Gap Title]**  
-  - **Recommendation**: [Detailed]  
-  - **Tool Example**: Great Expectations, Apache Deequ, Collibra  
-  - **Owner Role**: Data Steward, CDO  
-  - **Timeline**: Immediate / Q1 / Q2 / Long-term  
-  - **Framework Reference**: DAMA-DMBOK, ISO 8000-8  
-  - **Expected ROI**: Reduce error rate by 60%, save $XM  
-
----
-
-###  Strategic Observations  
-- **4–8 bullets**  
-- Each must:  
-  - Cite a survey finding (Q# + score)  
-  - Link to a framework  
-  - Offer a strategic insight  
-- Example:  
-  > "Q1 score=4 indicates no automated reconciliation — violates **DAMA-DMBOK Principle #3 (Accuracy)** and increases **GDPR Art. 5(1)(d)** risk."
-
----
-
-###  Question-Level Analysis  
-| Q# | Question | Category | Process | Stage | Responses | Min | Max | Avg | Comments |
-|----|---------|----------|---------|-------|-----------|-----|-----|-----|----------|
-| Q1 | Are automated reconciliation checks... | Accuracy | Ingestion | Creation | 1 | 4 | 4 | 4 | "Dates flip formats" |
-
-- **Include all  questions**  
-- **Quote 1–2 comments per low-scoring Q (<5)**  
-
----
-
-###  Risk Spotlight  
-| Risk | Severity | Regulatory Risk | Mitigation Urgency | Linked Qs |
-|------|----------|-----------------|---------------------|----------|
-| Inaccurate billing data | Critical | GDPR Art. 5(1)(d) | Immediate | Q1, Q7 |
-
-- **At least 3 risks**  
-- **Severity**: Critical / High / Medium / Low  
-- **Urgency**: Immediate / Short-term / Long-term  
-
----
-
-###  Self-Assessment (AI Quality Gate)  
-- **Clarity**: [1–10]  
-- **Actionability**: [1–10]  
-- **Evidence-Based**: [1–10]  
-- **Framework Alignment**: [1–10]  
-- **Depth of Analysis**: [1–10]  
-- **Average Score**: [X.X]  
-- **Revision Needed?**: Yes / No  
-- **Revision Notes**: [If <8.5, explain what to fix]
-
-### REPLY ONLY IN MARKDOWN FORMAT ###
-### END OF PROMPT ###
----
-"""
-                elif dimension == "Data Lineage & Traceability":
-                    system_prompt = prompt_add_on + "You are a **senior data management consultant** specializing in Data Lineage & Traceability. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score (on a 1-10 scale), Comment, Category, Process, and Lifecycle Stage."
-                    user_prompt_template = """
-Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
-
-# Data Lineage & Traceability – Survey Analysis Report
-
-### 1. Executive Summary
-- Average score & distribution
-- Top 3 themes from comments
-- Overall maturity level (High / Medium / Low)
-
-### 2. Performance by Category
-- Create a table with columns: **Category**, Avg Score, % High (8–10), % Low (1–4), Key Comment Themes
-- Highlight top-performing and at-risk categories
-
-### 3. Performance by Process
-- Create a table with columns: **Process**, Avg Score, Key Gaps, Recommended Tools/Methods
-
-### 4. Performance by Lifecycle Stage
-- Visualize maturity progression (e.g., strong in Monitoring, weak in Prevention)
-
-### 5. Strategic Observations
-- 3–5 bullet points with **consultative insights**
-- Link survey findings to industry frameworks (e.g., DAMA-DMBOK, data provenance standards)
-
-### 6. Prioritized Action Plan
-- Create a table with columns: Priority, Action Item, Owner, Timeline, Expected Outcome
-- Provide at least one 'High' priority action.
-
-### 7. Risk Spotlight
-- Identify critical risks (e.g., incomplete audit trails, traceability gaps)
-- Assign a mitigation urgency: Immediate / Short-term / Long-term
-
-### DEEP DRILL-DOWN REQUIRED ###
-
-### Analysis for every category
-
-###  Current State  
-- **Overall Mean Score**: [Calculate from all responses]  
-- **Median Score**: [Calculate]  
-- **% of Scores ≥7**: [Calculate]  
-- **% of Scores ≤3**: [Calculate]  
-- **Maturity Level**: [Critical / Low / Medium / High / Excellent]  
-- **Executive Summary (3–6 bullets)**:  
-  - Each bullet must cite a score, % or comment  
-  - Link to a framework (DAMA-DMBOK, GDPR, ISO 8000, NIST, etc.)  
-  - Be consultative and forward-looking  
-
----
-
-###  Analysis by Category  
-For **each Category** (e.g., Accuracy, Completeness, Timeliness):  
-
-| Category | Avg Score | % High (8–10) | % Low (1–4) | Questions |
-|---------|-----------|---------------|-------------|---------|
-| ...     | ...       | ...           | ...         | Q1, Q7  |
-
-####  [Category Name] — Deep Analysis  
-- **Score Breakdown**: Avg = X.X, Min = X, Max = X  
-- **Comment Analysis** (quote 3–5 key comments):  
-  - "Quote" → [Sentiment: Positive/Negative] → [Theme: e.g., Manual Entry]  
-- **Best Practices (3–6)**:  
-  - Cite DAMA-DMBOK, ISO 8000, GDPR Art. 5(1)(d), etc.  
-- **Observations (3–6)**:  
-  - Link survey evidence to gaps  
-- **Areas for Improvement (3–6)**:  
-  - Be specific and technical  
-- **Action Items (3–8)**:  
-  | Action | Priority | Owner | Timeline | Tool Example | Framework Ref |
-  |-------|----------|-------|----------|--------------|---------------|
-  | ...   | High     | Data Eng | Q1 2026  | Great Expectations | DAMA-DMBOK #3 |
-
----
-*** DEEP DRILL-DOWN REQUIRED ***
-###  Analysis by Process  
-For **each Process** (e.g., Data Ingestion, Cleansing, Monitoring):  
-
-| Process | Avg Score | Key Gaps (3–5) | Recommended Tools |
-|--------|-----------|----------------|-------------------|
-| ...    | ...       | ...            | ...               |
-
-####  [Process Name] — Deep Analysis  
-- **Score & Questions**: List Q#s, avg score  
-- **Comment Analysis**: Quote + sentiment + theme  
-- **Best Practices (3–6)**  
-- **Observations (3–6)**  
-- **Areas for Improvement (3–6)**  
-- **Action Items (3–8)**: Same table format  
-
----
-### DEEP DRILL-DOWN REQUIRED ###
-###   Analysis by Lifecycle Stage  
-For **each Stage** (e.g., Creation, Usage, Archival):  
-
-| Stage | Avg Score | Maturity Note |
-|-------|-----------|----------------|
-| ...   | ...       | Strong in monitoring, weak in prevention |
-
-####  [Stage Name] — Deep Analysis  
-- **Score Trend**: Compare to other stages  
-- **Comment Analysis**  
-- **Best Practices (3–6)**  
-- **Observations (3–6)**  
-- **Areas for Improvement (3–6)**  
-- **Action Items (3–8)**  
-
----
-
-###  Priority Actions (Risk × Impact)  
-| Rank | Initiative | Risk Severity | Business Impact | RICE Score | Linked Qs |
-|------|------------|---------------|-----------------|------------|----------|
-| 1    | Deploy cross-system reconciliation | High | High | 9 | Q1, Q16 |
-
-- **RICE Score** = (Reach × Impact × Confidence) ÷ Effort  
-- **Top 3 must be High priority**  
-- **Phrase as "Initiative"** (e.g., "Embed data quality criteria in SDLC acceptance checkpoints")
-
----
-
-###  Actionable Improvement Suggestions  
-- **One concrete, tool-enabled fix per major gap**  
-- **Format**:  
-  **→ [Gap Title]**  
-  - **Recommendation**: [Detailed]  
-  - **Tool Example**: Great Expectations, Apache Deequ, Collibra  
-  - **Owner Role**: Data Steward, CDO  
-  - **Timeline**: Immediate / Q1 / Q2 / Long-term  
-  - **Framework Reference**: DAMA-DMBOK, ISO 8000-8  
-  - **Expected ROI**: Reduce error rate by 60%, save $XM  
-
----
-
-###  Strategic Observations  
-- **4–8 bullets**  
-- Each must:  
-  - Cite a survey finding (Q# + score)  
-  - Link to a framework  
-  - Offer a strategic insight  
-- Example:  
-  > "Q1 score=4 indicates no automated reconciliation — violates **DAMA-DMBOK Principle #3 (Accuracy)** and increases **GDPR Art. 5(1)(d)** risk."
-
----
-
-###  Question-Level Analysis  
-| Q# | Question | Category | Process | Stage | Responses | Min | Max | Avg | Comments |
-|----|---------|----------|---------|-------|-----------|-----|-----|-----|----------|
-| Q1 | Are automated reconciliation checks... | Accuracy | Ingestion | Creation | 1 | 4 | 4 | 4 | "Dates flip formats" |
-
-- **Include all  questions**  
-- **Quote 1–2 comments per low-scoring Q (<5)**  
-
----
-
-###  Risk Spotlight  
-| Risk | Severity | Regulatory Risk | Mitigation Urgency | Linked Qs |
-|------|----------|-----------------|---------------------|----------|
-| Inaccurate billing data | Critical | GDPR Art. 5(1)(d) | Immediate | Q1, Q7 |
-
-- **At least 3 risks**  
-- **Severity**: Critical / High / Medium / Low  
-- **Urgency**: Immediate / Short-term / Long-term  
-
----
-
-###  Self-Assessment (AI Quality Gate)  
-- **Clarity**: [1–10]  
-- **Actionability**: [1–10]  
-- **Evidence-Based**: [1–10]  
-- **Framework Alignment**: [1–10]  
-- **Depth of Analysis**: [1–10]  
-- **Average Score**: [X.X]  
-- **Revision Needed?**: Yes / No  
-- **Revision Notes**: [If <8.5, explain what to fix]
-
-### REPLY ONLY IN MARKDOWN FORMAT ###
-### END OF PROMPT ###
----
-"""
-                elif dimension == "Data Security & Access":
-                    system_prompt = prompt_add_on + "You are a **senior data management consultant** specializing in Data Security & Access. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score (on a 1-10 scale), Comment, Category, Process, and Lifecycle Stage."
-                    user_prompt_template = """
-Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
-
-# Data Security & Access – Survey Analysis Report
-
-### 1. Executive Summary
-- Average score & distribution
-- Top 3 themes from comments
-- Overall maturity level (High / Medium / Low)
-
-### 2. Performance by Category
-- Create a table with columns: **Category**, Avg Score, % High (8–10), % Low (1–4), Key Comment Themes
-- Highlight top-performing and at-risk categories
-
-### 3. Performance by Process
-- Create a table with columns: **Process**, Avg Score, Key Gaps, Recommended Tools/Methods
-
-### 4. Performance by Lifecycle Stage
-- Visualize maturity progression (e.g., strong in Monitoring, weak in Prevention)
-
-### 5. Strategic Observations
-- 3–5 bullet points with **consultative insights**
-- Link survey findings to industry frameworks (e.g., ISO 27001, NIST Cybersecurity Framework)
-
-### 6. Prioritized Action Plan
-- Create a table with columns: Priority, Action Item, Owner, Timeline, Expected Outcome
-- Provide at least one 'High' priority action.
-
-### 7. Risk Spotlight
-- Identify critical risks (e.g., unauthorized access, data breaches)
-- Assign a mitigation urgency: Immediate / Short-term / Long-term
-
-### DEEP DRILL-DOWN REQUIRED ###
-
-### Analysis for every category
-
-###  Current State  
-- **Overall Mean Score**: [Calculate from all responses]  
-- **Median Score**: [Calculate]  
-- **% of Scores ≥7**: [Calculate]  
-- **% of Scores ≤3**: [Calculate]  
-- **Maturity Level**: [Critical / Low / Medium / High / Excellent]  
-- **Executive Summary (3–6 bullets)**:  
-  - Each bullet must cite a score, % or comment  
-  - Link to a framework (DAMA-DMBOK, GDPR, ISO 8000, NIST, etc.)  
-  - Be consultative and forward-looking  
-
----
-
-###  Analysis by Category  
-For **each Category** (e.g., Accuracy, Completeness, Timeliness):  
-
-| Category | Avg Score | % High (8–10) | % Low (1–4) | Questions |
-|---------|-----------|---------------|-------------|---------|
-| ...     | ...       | ...           | ...         | Q1, Q7  |
-
-####  [Category Name] — Deep Analysis  
-- **Score Breakdown**: Avg = X.X, Min = X, Max = X  
-- **Comment Analysis** (quote 3–5 key comments):  
-  - "Quote" → [Sentiment: Positive/Negative] → [Theme: e.g., Manual Entry]  
-- **Best Practices (3–6)**:  
-  - Cite DAMA-DMBOK, ISO 8000, GDPR Art. 5(1)(d), etc.  
-- **Observations (3–6)**:  
-  - Link survey evidence to gaps  
-- **Areas for Improvement (3–6)**:  
-  - Be specific and technical  
-- **Action Items (3–8)**:  
-  | Action | Priority | Owner | Timeline | Tool Example | Framework Ref |
-  |-------|----------|-------|----------|--------------|---------------|
-  | ...   | High     | Data Eng | Q1 2026  | Great Expectations | DAMA-DMBOK #3 |
-
----
-*** DEEP DRILL-DOWN REQUIRED ***
-###  Analysis by Process  
-For **each Process** (e.g., Data Ingestion, Cleansing, Monitoring):  
-
-| Process | Avg Score | Key Gaps (3–5) | Recommended Tools |
-|--------|-----------|----------------|-------------------|
-| ...    | ...       | ...            | ...               |
-
-####  [Process Name] — Deep Analysis  
-- **Score & Questions**: List Q#s, avg score  
-- **Comment Analysis**: Quote + sentiment + theme  
-- **Best Practices (3–6)**  
-- **Observations (3–6)**  
-- **Areas for Improvement (3–6)**  
-- **Action Items (3–8)**: Same table format  
-
----
-### DEEP DRILL-DOWN REQUIRED ###
-###   Analysis by Lifecycle Stage  
-For **each Stage** (e.g., Creation, Usage, Archival):  
-
-| Stage | Avg Score | Maturity Note |
-|-------|-----------|----------------|
-| ...   | ...       | Strong in monitoring, weak in prevention |
-
-####  [Stage Name] — Deep Analysis  
-- **Score Trend**: Compare to other stages  
-- **Comment Analysis**  
-- **Best Practices (3–6)**  
-- **Observations (3–6)**  
-- **Areas for Improvement (3–6)**  
-- **Action Items (3–8)**  
-
----
-
-###  Priority Actions (Risk × Impact)  
-| Rank | Initiative | Risk Severity | Business Impact | RICE Score | Linked Qs |
-|------|------------|---------------|-----------------|------------|----------|
-| 1    | Deploy cross-system reconciliation | High | High | 9 | Q1, Q16 |
-
-- **RICE Score** = (Reach × Impact × Confidence) ÷ Effort  
-- **Top 3 must be High priority**  
-- **Phrase as "Initiative"** (e.g., "Embed data quality criteria in SDLC acceptance checkpoints")
-
----
-
-###  Actionable Improvement Suggestions  
-- **One concrete, tool-enabled fix per major gap**  
-- **Format**:  
-  **→ [Gap Title]**  
-  - **Recommendation**: [Detailed]  
-  - **Tool Example**: Great Expectations, Apache Deequ, Collibra  
-  - **Owner Role**: Data Steward, CDO  
-  - **Timeline**: Immediate / Q1 / Q2 / Long-term  
-  - **Framework Reference**: DAMA-DMBOK, ISO 8000-8  
-  - **Expected ROI**: Reduce error rate by 60%, save $XM  
-
----
-
-###  Strategic Observations  
-- **4–8 bullets**  
-- Each must:  
-  - Cite a survey finding (Q# + score)  
-  - Link to a framework  
-  - Offer a strategic insight  
-- Example:  
-  > "Q1 score=4 indicates no automated reconciliation — violates **DAMA-DMBOK Principle #3 (Accuracy)** and increases **GDPR Art. 5(1)(d)** risk."
-
----
-
-###  Question-Level Analysis  
-| Q# | Question | Category | Process | Stage | Responses | Min | Max | Avg | Comments |
-|----|---------|----------|---------|-------|-----------|-----|-----|-----|----------|
-| Q1 | Are automated reconciliation checks... | Accuracy | Ingestion | Creation | 1 | 4 | 4 | 4 | "Dates flip formats" |
-
-- **Include all  questions**  
-- **Quote 1–2 comments per low-scoring Q (<5)**  
-
----
-
-###  Risk Spotlight  
-| Risk | Severity | Regulatory Risk | Mitigation Urgency | Linked Qs |
-|------|----------|-----------------|---------------------|----------|
-| Inaccurate billing data | Critical | GDPR Art. 5(1)(d) | Immediate | Q1, Q7 |
-
-- **At least 3 risks**  
-- **Severity**: Critical / High / Medium / Low  
-- **Urgency**: Immediate / Short-term / Long-term  
-
----
-
-###  Self-Assessment (AI Quality Gate)  
-- **Clarity**: [1–10]  
-- **Actionability**: [1–10]  
-- **Evidence-Based**: [1–10]  
-- **Framework Alignment**: [1–10]  
-- **Depth of Analysis**: [1–10]  
-- **Average Score**: [X.X]  
-- **Revision Needed?**: Yes / No  
-- **Revision Notes**: [If <8.5, explain what to fix]
-
-### REPLY ONLY IN MARKDOWN FORMAT ###
-### END OF PROMPT ###
----
-"""
-                elif dimension == "Metadata & Documentation":
-                    system_prompt = prompt_add_on + "You are a **senior data management consultant** specializing in Metadata & Documentation. Your output must be a professionally crafted, consultative,executive-ready report in PDF-friendly Markdown format. Analyze the provided survey responses which include Question, Score (on a 1-10 scale), Comment, Category, Process, and Lifecycle Stage."
-                    user_prompt_template = """
-Generate a report with the following sections based on the provided survey data. Use clear headings, tables, and bullet points for optimal readability.
-
-# Metadata & Documentation – Survey Analysis Report
-
-### 1. Executive Summary
-- Average score & distribution
-- Top 3 themes from comments
-- Overall maturity level (High / Medium / Low)
-
-### 2. Performance by Category
-- Create a table with columns: **Category**, Avg Score, % High (8–10), % Low (1–4), Key Comment Themes
-- Highlight top-performing and at-risk categories
-
-### 3. Performance by Process
-- Create a table with columns: **Process**, Avg Score, Key Gaps, Recommended Tools/Methods
-
-### 4. Performance by Lifecycle Stage
-- Visualize maturity progression (e.g., strong in Monitoring, weak in Prevention)
-
-### 5. Strategic Observations
-- 3–5 bullet points with **consultative insights**
-- Link survey findings to industry frameworks (e.g., DAMA-DMBOK, metadata schemas like Dublin Core)
-
-### 6. Prioritized Action Plan
-- Create a table with columns: Priority, Action Item, Owner, Timeline, Expected Outcome
-- Provide at least one 'High' priority action.
-
-### 7. Risk Spotlight
-- Identify critical risks (e.g., poor data discoverability, compliance issues)
-- Assign a mitigation urgency: Immediate / Short-term / Long-term
-
-### DEEP DRILL-DOWN REQUIRED ###
-
-### Analysis for every category
-
-###  Current State  
-- **Overall Mean Score**: [Calculate from all responses]  
-- **Median Score**: [Calculate]  
-- **% of Scores ≥7**: [Calculate]  
-- **% of Scores ≤3**: [Calculate]  
-- **Maturity Level**: [Critical / Low / Medium / High / Excellent]  
-- **Executive Summary (3–6 bullets)**:  
-  - Each bullet must cite a score, % or comment  
-  - Link to a framework (DAMA-DMBOK, GDPR, ISO 8000, NIST, etc.)  
-  - Be consultative and forward-looking  
-
----
-
-###  Analysis by Category  
-For **each Category** (e.g., Accuracy, Completeness, Timeliness):  
-
-| Category | Avg Score | % High (8–10) | % Low (1–4) | Questions |
-|---------|-----------|---------------|-------------|---------|
-| ...     | ...       | ...           | ...         | Q1, Q7  |
-
-####  [Category Name] — Deep Analysis  
-- **Score Breakdown**: Avg = X.X, Min = X, Max = X  
-- **Comment Analysis** (quote 3–5 key comments):  
-  - "Quote" → [Sentiment: Positive/Negative] → [Theme: e.g., Manual Entry]  
-- **Best Practices (3–6)**:  
-  - Cite DAMA-DMBOK, ISO 8000, GDPR Art. 5(1)(d), etc.  
-- **Observations (3–6)**:  
-  - Link survey evidence to gaps  
-- **Areas for Improvement (3–6)**:  
-  - Be specific and technical  
-- **Action Items (3–8)**:  
-  | Action | Priority | Owner | Timeline | Tool Example | Framework Ref |
-  |-------|----------|-------|----------|--------------|---------------|
-  | ...   | High     | Data Eng | Q1 2026  | Great Expectations | DAMA-DMBOK #3 |
-
----
-*** DEEP DRILL-DOWN REQUIRED ***
-###  Analysis by Process  
-For **each Process** (e.g., Data Ingestion, Cleansing, Monitoring):  
-
-| Process | Avg Score | Key Gaps (3–5) | Recommended Tools |
-|--------|-----------|----------------|-------------------|
-| ...    | ...       | ...            | ...               |
-
-####  [Process Name] — Deep Analysis  
-- **Score & Questions**: List Q#s, avg score  
-- **Comment Analysis**: Quote + sentiment + theme  
-- **Best Practices (3–6)**  
-- **Observations (3–6)**  
-- **Areas for Improvement (3–6)**  
-- **Action Items (3–8)**: Same table format  
-
----
-### DEEP DRILL-DOWN REQUIRED ###
-###   Analysis by Lifecycle Stage  
-For **each Stage** (e.g., Creation, Usage, Archival):  
-
-| Stage | Avg Score | Maturity Note |
-|-------|-----------|----------------|
-| ...   | ...       | Strong in monitoring, weak in prevention |
-
-####  [Stage Name] — Deep Analysis  
-- **Score Trend**: Compare to other stages  
-- **Comment Analysis**  
-- **Best Practices (3–6)**  
-- **Observations (3–6)**  
-- **Areas for Improvement (3–6)**  
-- **Action Items (3–8)**  
-
----
-
-###  Priority Actions (Risk × Impact)  
-| Rank | Initiative | Risk Severity | Business Impact | RICE Score | Linked Qs |
-|------|------------|---------------|-----------------|------------|----------|
-| 1    | Deploy cross-system reconciliation | High | High | 9 | Q1, Q16 |
-
-- **RICE Score** = (Reach × Impact × Confidence) ÷ Effort  
-- **Top 3 must be High priority**  
-- **Phrase as "Initiative"** (e.g., "Embed data quality criteria in SDLC acceptance checkpoints")
-
----
-
-###  Actionable Improvement Suggestions  
-- **One concrete, tool-enabled fix per major gap**  
-- **Format**:  
-  **→ [Gap Title]**  
-  - **Recommendation**: [Detailed]  
-  - **Tool Example**: Great Expectations, Apache Deequ, Collibra  
-  - **Owner Role**: Data Steward, CDO  
-  - **Timeline**: Immediate / Q1 / Q2 / Long-term  
-  - **Framework Reference**: DAMA-DMBOK, ISO 8000-8  
-  - **Expected ROI**: Reduce error rate by 60%, save $XM  
-
----
-
-###  Strategic Observations  
-- **4–8 bullets**  
-- Each must:  
-  - Cite a survey finding (Q# + score)  
-  - Link to a framework  
-  - Offer a strategic insight  
-- Example:  
-  > "Q1 score=4 indicates no automated reconciliation — violates **DAMA-DMBOK Principle #3 (Accuracy)** and increases **GDPR Art. 5(1)(d)** risk."
-
----
-
-###  Question-Level Analysis  
-| Q# | Question | Category | Process | Stage | Responses | Min | Max | Avg | Comments |
-|----|---------|----------|---------|-------|-----------|-----|-----|-----|----------|
-| Q1 | Are automated reconciliation checks... | Accuracy | Ingestion | Creation | 1 | 4 | 4 | 4 | "Dates flip formats" |
-
-- **Include all  questions**  
-- **Quote 1–2 comments per low-scoring Q (<5)**  
-
----
-
-###  Risk Spotlight  
-| Risk | Severity | Regulatory Risk | Mitigation Urgency | Linked Qs |
-|------|----------|-----------------|---------------------|----------|
-| Inaccurate billing data | Critical | GDPR Art. 5(1)(d) | Immediate | Q1, Q7 |
-
-- **At least 3 risks**  
-- **Severity**: Critical / High / Medium / Low  
-- **Urgency**: Immediate / Short-term / Long-term  
-
----
-
-###  Self-Assessment (AI Quality Gate)  
-- **Clarity**: [1–10]  
-- **Actionability**: [1–10]  
-- **Evidence-Based**: [1–10]  
-- **Framework Alignment**: [1–10]  
-- **Depth of Analysis**: [1–10]  
-- **Average Score**: [X.X]  
-- **Revision Needed?**: Yes / No  
-- **Revision Notes**: [If <8.5, explain what to fix]
-
-### REPLY ONLY IN MARKDOWN FORMAT ###
-### END OF PROMPT ###
----
-"""
-
+                # Get dimension-specific prompts or use defaults
+                if dimension in DIMENSION_PROMPTS:
+                    system_prompt = DIMENSION_PROMPTS[dimension]["system"]
+                    user_prompt_template = DIMENSION_PROMPTS[dimension]["user"]
+                else:
+                    system_prompt = PROMPT_ADD_ON + DEFAULT_SYSTEM_PROMPT
+                    user_prompt_template = DEFAULT_USER_PROMPT_TEMPLATE
+
+                # Build the chunk prompt
                 chunk_prompt = f"""Analyze the following survey responses for the {dimension} dimension (Part {i+1} of {len(chunks)}):
 
 Questions and Responses:
@@ -1065,11 +162,11 @@ Questions and Responses:
                 chunk_summary = await LLMService._call_llm(
                     provider, messages, max_tokens=20000
                 )
-                                
+
                 chunk_summaries.append({
                     "chunk_index": i,
                     "total_chunks": len(chunks),
-                    "content": chunk_response,
+                    "content": chunk_summary,
                     "json_content": None # Removed
                 })
             
@@ -1096,7 +193,6 @@ Questions and Responses:
                 final_summary = await LLMService._call_llm(
                     provider, messages, max_tokens=20000
                 )
-                final_summary, final_json = final_response, None
             
             single_chunk_summary = chunk_summaries[0] if chunk_summaries else {}
 
@@ -1154,63 +250,19 @@ Questions and Responses:
                 if data['avg_score'] is not None
             ]) if lifecycle_analysis else "No lifecycle stage data available"
 
-            prompt = f"""As a data governance expert, provide a comprehensive analysis of the {dimension} dimension.
-
-METRICS:
-- Average Score: {overall_metrics['avg_score']}/10
-- Response Rate: {overall_metrics['response_rate']}
-- Score Range: {overall_metrics['min_score']} - {overall_metrics['max_score']}
-- Total Responses: {overall_metrics['total_responses']}
-
-CATEGORY BREAKDOWN:
-{category_text}
-
-PROCESS BREAKDOWN:
-{process_text}
-
-LIFECYCLE STAGE BREAKDOWN:
-{lifecycle_text}
-
-Provide a comprehensive analysis with the following sections:
-
-## Strategic Observations
-- What do these scores indicate about organizational maturity in {dimension}?
-- Which areas show strength vs weakness?
-- Are there concerning patterns or trends?
-
-## Category Analysis
-- Compare category performance
-- Identify highest/lowest performing categories
-- Explain potential reasons for category performance differences
-
-## Process Analysis
-- Which processes need attention?
-- Are processes balanced or showing uneven maturity?
-- What process improvements should be prioritized?
-
-## Lifecycle Analysis
-- Which lifecycle stages are problematic?
-- Is there evidence of progression issues?
-- What lifecycle improvements are needed?
-
-## Actionable Recommendations
-Provide 5-7 specific, prioritized actions organized by timeframe:
-
-**Quick Wins (< 3 months):**
-- [specific actions that can be completed quickly]
-
-**Medium-term Improvements (3-6 months):**
-- [actions requiring more planning and resources]
-
-**Strategic Initiatives (6-12 months):**
-- [major transformational efforts]
-
-Format your response in markdown with clear headers and bullet points. Be specific and actionable."""
+            # Get the prompt from the prompts module
+            prompt = get_deep_dimension_analysis_prompt(
+                dimension,
+                overall_metrics,
+                category_text,
+                process_text,
+                lifecycle_text
+            )
 
             messages = [
                 {
                     "role": "system",
-                    "content": "You are a senior data governance expert writing a professional strategic report. Write in a formal, report-style format suitable for executive review. Use third-person perspective. Provide clear, actionable insights in markdown format with proper headers, bullet points, and line breaks."
+                    "content": DEEP_DIMENSION_ANALYSIS_SYSTEM_PROMPT
                 },
                 {"role": "user", "content": prompt}
             ]
@@ -1252,44 +304,19 @@ Format your response in markdown with clear headers and bullet points. Be specif
             comments = facet_data.get('comments', [])[:10]
             comments_text = "\n".join([f"- \"{comment}\"" for comment in comments]) if comments else "No comments available"
 
-            prompt = f"""Analyze this {facet_type} facet of data governance:
-
-{facet_type.upper()}: {facet_name}
-Average Score: {facet_data['avg_score']}/10
-Score Range: {facet_data['min_score']} - {facet_data['max_score']}
-Total Responses: {facet_data['count']}
-Respondents: {facet_data['respondents']}
-
-Questions in this {facet_type}:
-{questions_text}
-
-Sample Comments:
-{comments_text}
-
-Provide analysis with these sections:
-
-## Performance Assessment
-- How is this {facet_type} performing relative to a 10-point scale?
-- What does this score indicate about organizational capabilities?
-
-## Root Cause Analysis
-- Why might this {facet_type} be scoring at this level?
-- What underlying factors could explain the performance?
-
-## Specific Recommendations
-- What 3-5 concrete actions should be taken to improve this {facet_type}?
-- Prioritize recommendations by impact and feasibility
-
-## Success Metrics
-- What metrics should be tracked to measure improvement?
-- What would "good" look like for this {facet_type} in 6-12 months?
-
-Format in markdown with clear headers and bullet points."""
+            # Get the prompt from the prompts module
+            prompt = get_facet_analysis_prompt(
+                facet_type,
+                facet_name,
+                facet_data,
+                questions_text,
+                comments_text
+            )
 
             messages = [
                 {
                     "role": "system",
-                    "content": "You are a data governance specialist writing a focused analysis report. Write in a professional, report-style format. Use third-person perspective. Provide specific, actionable insights."
+                    "content": FACET_ANALYSIS_SYSTEM_PROMPT
                 },
                 {"role": "user", "content": prompt}
             ]
@@ -1324,44 +351,17 @@ Format in markdown with clear headers and bullet points."""
             sampled_comments = comments[:sample_size]
             comments_text = "\n".join([f"{i+1}. \"{comment}\"" for i, comment in enumerate(sampled_comments)])
 
-            prompt = f"""Analyze these {len(comments)} survey comments (showing {sample_size} samples):
-
-{comments_text}
-
-Provide comprehensive comment analysis with these sections:
-
-## Sentiment Analysis
-Categorize the comments and provide percentages:
-- Positive comments: X%
-- Neutral comments: Y%
-- Negative comments: Z%
-
-Explain the overall sentiment trend.
-
-## Key Themes
-List the 5-7 most common themes across all comments. For each theme:
-- Theme name
-- Brief description
-- Approximate frequency
-
-## Top Concerns
-What are respondents most worried about or frustrated with?
-List 3-5 main concerns in order of frequency/severity.
-
-## Positive Highlights
-What are respondents happy about or praising?
-List 3-5 positive aspects mentioned.
-
-## Recommendations Based on Comments
-What actions should be taken based on the feedback in these comments?
-Provide 3-5 specific recommendations.
-
-Format in markdown with clear headers and bullet points."""
+            # Get the prompt from the prompts module
+            prompt = get_comment_analysis_prompt(
+                len(comments),
+                sample_size,
+                comments_text
+            )
 
             messages = [
                 {
                     "role": "system",
-                    "content": "You are a data analyst specializing in qualitative feedback analysis. Write a professional report suitable for management review. Use third-person perspective. Provide objective analysis with specific insights."
+                    "content": COMMENT_ANALYSIS_SYSTEM_PROMPT
                 },
                 {"role": "user", "content": prompt}
             ]
@@ -1436,7 +436,7 @@ Format in markdown with clear headers and bullet points."""
                     chunk_summary = await LLMService._call_llm(
                         provider, messages, max_tokens=20000
                     )
-                    chunk_summaries.append(chunk_response)
+                    chunk_summaries.append(chunk_summary)
                 
                 # Final consolidation
                 final_prompt = "You have analyzed multiple groups of data governance dimensions. Here are the analyses:\n\n"
@@ -1496,7 +496,7 @@ Generate a professionally crafted, consultative, executive-ready report with the
                 return {
                     "success": True,
                     "markdown_content": final_summary,
-                    "json_content": final_json,
+                    "json_content": None,
                     "chunks_processed": len(chunks)
                 }
 
@@ -1542,12 +542,11 @@ Use markdown formatting with clear headers and bullet points."""
                 summary = await LLMService._call_llm(
                     provider, messages, max_tokens=20000
                 )
-                markdown_summary, json_summary = response_text, None
-                
+
                 return {
                     "success": True,
-                    "markdown_content": markdown_summary,
-                    "json_content": json_summary,
+                    "markdown_content": summary,
+                    "json_content": None,
                     "chunks_processed": 1
                 }
         
