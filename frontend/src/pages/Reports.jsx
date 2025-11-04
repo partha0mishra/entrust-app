@@ -86,7 +86,7 @@ export default function Reports() {
       // Use a functional update for selectedCustomer to get the latest state
       setSelectedCustomer(prevCustomer => {
         const customer = customers.find(c => c && c.id === customerId) || prevCustomer;
-        setCustomerCode(customer.customer_code || null);
+        setCustomerCode(customer && customer.customer_code ? customer.customer_code : null);
         return customer;
       });
     } catch (error) {
