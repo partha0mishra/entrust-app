@@ -249,19 +249,18 @@ def get_dimension_reports(
 ):
     if current_user.user_type == models.UserType.PARTICIPANT:
         raise HTTPException(status_code=403, detail="Participants cannot view reports")
-    
-    # Sales and Admin can view any customer, CXO can only view their own
-    if current_user.user_type not in [models.UserType.SALES, models.UserType.SYSTEM_ADMIN]:
-        if current_user.customer_id != customer_id:
-            raise HTTPException(status_code=403, detail="Can only view your own customer's reports")
-    
+
+    # Sales, Admin, and CXO can view reports
+    if current_user.user_type not in [models.UserType.SALES, models.UserType.SYSTEM_ADMIN, models.UserType.CXO]:
+        raise HTTPException(status_code=403, detail="You do not have permission to view reports")
+
     survey = db.query(models.Survey).filter(
         models.Survey.customer_id == customer_id
     ).first()
-    
+
     if not survey:
         return {"message": "No survey data available"}
-    
+
     dimensions = db.query(models.Question.dimension).distinct().all()
     return [{"dimension": d[0]} for d in dimensions]
 
@@ -276,10 +275,9 @@ async def get_dimension_report(
     if current_user.user_type == models.UserType.PARTICIPANT:
         raise HTTPException(status_code=403, detail="Participants cannot view reports")
 
-    # Sales and Admin can view any customer, CXO can only view their own
-    if current_user.user_type not in [models.UserType.SALES, models.UserType.SYSTEM_ADMIN]:
-        if current_user.customer_id != customer_id:
-            raise HTTPException(status_code=403, detail="Can only view your own customer's reports")
+    # Sales, Admin, and CXO can view reports
+    if current_user.user_type not in [models.UserType.SALES, models.UserType.SYSTEM_ADMIN, models.UserType.CXO]:
+        raise HTTPException(status_code=403, detail="You do not have permission to view reports")
 
     survey = db.query(models.Survey).filter(
         models.Survey.customer_id == customer_id
@@ -495,16 +493,15 @@ async def get_overall_report(
 ):
     if current_user.user_type == models.UserType.PARTICIPANT:
         raise HTTPException(status_code=403, detail="Participants cannot view reports")
-    
-    # Sales and Admin can view any customer, CXO can only view their own
-    if current_user.user_type not in [models.UserType.SALES, models.UserType.SYSTEM_ADMIN]:
-        if current_user.customer_id != customer_id:
-            raise HTTPException(status_code=403, detail="Can only view your own customer's reports")
-    
+
+    # Sales, Admin, and CXO can view reports
+    if current_user.user_type not in [models.UserType.SALES, models.UserType.SYSTEM_ADMIN, models.UserType.CXO]:
+        raise HTTPException(status_code=403, detail="You do not have permission to view reports")
+
     survey = db.query(models.Survey).filter(
         models.Survey.customer_id == customer_id
     ).first()
-    
+
     if not survey:
         return {"error": "No survey data available"}
     
