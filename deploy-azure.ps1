@@ -11,7 +11,7 @@ $ACR_LOGIN_SERVER = "enacceleratorsacr.azurecr.io"
 $POSTGRES_SERVER = "entrust-postgres-server"
 $POSTGRES_RESOURCE_GROUP = "en_accelerators_db"
 $POSTGRES_ADMIN_USER = "entrust_admin"
-$POSTGRES_ADMIN_PASSWORD = "Welcome123!@#"  # Update with actual password if different
+$POSTGRES_ADMIN_PASSWORD = "EnTrust@2025Secure!"
 $POSTGRES_DB_NAME = "entrust_db"
 $CONTAINER_APP_ENV = "entrust-env"
 
@@ -97,8 +97,8 @@ if ($LASTEXITCODE -ne 0) {
 
 # Step 7: Deploy backend container app
 Write-Host "[7/8] Deploying backend container app..."
-# Note: URL encode special characters in password (e.g., @ becomes %40, ! becomes %21, # becomes %23)
-$encodedPassword = $POSTGRES_ADMIN_PASSWORD -replace '@', '%40' -replace '!', '%21' -replace '#', '%23' -replace ' ', '%20'
+# Note: URL encode special characters in password (@ becomes %40, ! becomes %21, etc.)
+$encodedPassword = $POSTGRES_ADMIN_PASSWORD -replace '@', '%40' -replace '!', '%21' -replace '#', '%23' -replace ' ', '%20' -replace '\$', '%24'
 $DATABASE_URL = "postgresql://${POSTGRES_ADMIN_USER}:${encodedPassword}@${POSTGRES_FQDN}:5432/${POSTGRES_DB_NAME}?sslmode=require"
 $SECRET_KEY = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object {[char]$_})
 
@@ -113,6 +113,7 @@ az containerapp create `
     --registry-server $ACR_LOGIN_SERVER `
     --target-port 8000 `
     --ingress external `
+    --allow-insecure false `
     --env-vars "DATABASE_URL=$DATABASE_URL" "SECRET_KEY=$SECRET_KEY" "ALGORITHM=HS256" "ACCESS_TOKEN_EXPIRE_MINUTES=1440" "LOG_LEVEL=INFO" "ALLOWED_ORIGINS=http://localhost:3000,$FRONTEND_URL_PLACEHOLDER" `
     --cpu 1.0 `
     --memory 2.0Gi `
@@ -156,6 +157,7 @@ az containerapp create `
     --registry-server $ACR_LOGIN_SERVER `
     --target-port 80 `
     --ingress external `
+    --allow-insecure false `
     --cpu 0.5 `
     --memory 1.0Gi `
     --min-replicas 1 `

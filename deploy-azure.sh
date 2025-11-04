@@ -13,7 +13,7 @@ ACR_LOGIN_SERVER="enacceleratorsacr.azurecr.io"
 POSTGRES_SERVER="entrust-postgres-server"
 POSTGRES_RESOURCE_GROUP="en_accelerators_db"
 POSTGRES_ADMIN_USER="entrust_admin"
-POSTGRES_ADMIN_PASSWORD="Welcome123!@#"  # Update with actual password if different
+POSTGRES_ADMIN_PASSWORD="EnTrust@2025Secure!"
 POSTGRES_DB_NAME="entrust_db"
 CONTAINER_APP_ENV="entrust-env"
 
@@ -109,6 +109,7 @@ az containerapp create \
     --registry-server $ACR_LOGIN_SERVER \
     --target-port 8000 \
     --ingress external \
+    --allow-insecure false \
     --env-vars \
         "DATABASE_URL=$DATABASE_URL" \
         "SECRET_KEY=$(openssl rand -hex 32)" \
@@ -155,6 +156,7 @@ az containerapp create \
     --registry-server $ACR_LOGIN_SERVER \
     --target-port 80 \
     --ingress external \
+    --allow-insecure false \
     --cpu 0.5 \
     --memory 1.0Gi \
     --min-replicas 1 \

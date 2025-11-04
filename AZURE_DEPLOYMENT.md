@@ -4,9 +4,23 @@ This guide explains how to deploy the EnTrust application to Azure using Azure C
 
 ## Prerequisites
 
-1. Azure CLI installed and logged in
-2. Azure subscription with write permissions (currently subscription is read-only)
-3. Docker installed locally (for initial testing)
+1. **Azure CLI** installed and logged in
+   ```bash
+   az login
+   az account set --subscription "Azure Subscription 1012373"
+   ```
+
+2. **Azure Access Permissions** - You need Contributor or Owner role on:
+   - Resource Group: `entrust-rg`
+   - Resource Group: `en_accelerators_db` (for PostgreSQL server)
+   - Container Registry: `enacceleratorsacr`
+
+3. **Access to Existing Resources**:
+   - PostgreSQL Server: `entrust-postgres-server` (in `en_accelerators_db`)
+   - Container Registry: `enacceleratorsacr` (in `entrust-rg`)
+   - Database credentials: `entrust_admin` / `EnTrust@2025Secure!`
+
+4. **Docker** installed locally (for initial testing, not required for deployment)
 
 ## Architecture
 
@@ -14,7 +28,15 @@ This guide explains how to deploy the EnTrust application to Azure using Azure C
 - **Backend**: FastAPI app deployed as Azure Container App  
 - **Database**: Azure Database for PostgreSQL Flexible Server
 
-## Deployment Steps
+## Important Notes
+
+⚠️ **Security**: The database password is configured in the deployment scripts. For production, consider using Azure Key Vault to store sensitive credentials.
+
+⚠️ **Existing Deployments**: This deployment creates new Container Apps and will NOT affect:
+- Existing `entrust-web-container` (Container Instance)
+- Existing EnMapper containers in `EnMapper_encora_production` resource group
+
+## Deployment
 
 ### Option 1: Automated Deployment (Recommended)
 
@@ -52,14 +74,14 @@ az postgres flexible-server start \
     --name entrust-postgres-server \
     --resource-group en_accelerators_db
 
-# Create database
+# Create database (if not exists)
 az postgres flexible-server db create \
     --resource-group en_accelerators_db \
     --server-name entrust-postgres-server \
     --database-name entrust_db
 ```
 
-**Note**: The admin user is `entrust_admin`. Update the password in the deployment script if different from `Welcome123!@#`.
+**Note**: The deployment uses database `entrust_db` with admin user `entrust_admin` and password `EnTrust@2025Secure!`.
 
 #### 3. Build and Push Backend Image
 ```bash
@@ -103,7 +125,7 @@ az containerapp create \
     --target-port 8000 \
     --ingress external \
     --env-vars \
-        "DATABASE_URL=postgresql://entrust_admin:Welcome123!@#@entrust-postgres-server.postgres.database.azure.com:5432/entrust_db?sslmode=require" \
+        "DATABASE_URL=postgresql://entrust_admin:EnTrust@2025Secure!@entrust-postgres-server.postgres.database.azure.com:5432/entrust_db?sslmode=require" \
         "SECRET_KEY=<generate-secret-key>" \
         "ALGORITHM=HS256" \
         "ACCESS_TOKEN_EXPIRE_MINUTES=1440" \
