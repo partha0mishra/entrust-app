@@ -75,9 +75,23 @@ class LLMService:
     async def _call_llm(
         provider,
         messages: List[Dict],
-        max_tokens: int = 20000
+        max_tokens: Optional[int] = None
     ) -> str:
-        """Helper method to call LLM API using provider"""
+        """Helper method to call LLM API using provider
+        
+        If max_tokens is not provided, automatically determines based on provider:
+        - For AWS Bedrock with thinking mode: 15000 (to accommodate budget_tokens)
+        - For AWS Bedrock without thinking mode: 8000 (faster responses)
+        - For Azure OpenAI: 8000 (standard)
+        - For others: 8000 (default)
+        """
+        if max_tokens is None:
+            # Auto-detect appropriate max_tokens based on provider
+            if hasattr(provider, 'thinking_mode') and provider.thinking_mode == "enabled":
+                max_tokens = 15000  # For thinking mode, need at least 1.5x budget_tokens
+            else:
+                max_tokens = 8000  # For non-thinking mode, use reasonable default
+        
         return await provider.call_llm(messages, max_tokens)
     
     @staticmethod
@@ -160,7 +174,7 @@ Questions and Responses:
                 ]
 
                 chunk_summary = await LLMService._call_llm(
-                    provider, messages, max_tokens=20000
+                    provider, messages  # Auto-determines max_tokens based on thinking mode
                 )
 
                 chunk_summaries.append({
@@ -191,7 +205,7 @@ Questions and Responses:
                 ]
 
                 final_summary = await LLMService._call_llm(
-                    provider, messages, max_tokens=20000
+                    provider, messages  # Auto-determines max_tokens based on thinking mode
                 )
             
             single_chunk_summary = chunk_summaries[0] if chunk_summaries else {}
@@ -267,7 +281,7 @@ Questions and Responses:
                 {"role": "user", "content": prompt}
             ]
 
-            content = await LLMService._call_llm(provider, messages, max_tokens=20000)
+            content = await LLMService._call_llm(provider, messages)  # Auto-determines max_tokens based on thinking mode
 
             return {
                 "success": True,
@@ -321,7 +335,7 @@ Questions and Responses:
                 {"role": "user", "content": prompt}
             ]
 
-            content = await LLMService._call_llm(provider, messages, max_tokens=20000)
+            content = await LLMService._call_llm(provider, messages)  # Auto-determines max_tokens based on thinking mode
 
             return {
                 "success": True,
@@ -366,7 +380,7 @@ Questions and Responses:
                 {"role": "user", "content": prompt}
             ]
 
-            content = await LLMService._call_llm(provider, messages, max_tokens=20000)
+            content = await LLMService._call_llm(provider, messages)  # Auto-determines max_tokens based on thinking mode
 
             return {
                 "success": True,
@@ -490,7 +504,7 @@ Generate a professionally crafted, consultative, executive-ready report with the
                 ]
 
                 final_summary = await LLMService._call_llm(
-                    provider, messages, max_tokens=20000
+                    provider, messages  # Auto-determines max_tokens based on thinking mode
                 )
 
                 return {
@@ -540,7 +554,7 @@ Use markdown formatting with clear headers and bullet points."""
                 ]
 
                 summary = await LLMService._call_llm(
-                    provider, messages, max_tokens=20000
+                    provider, messages  # Auto-determines max_tokens based on thinking mode
                 )
 
                 return {

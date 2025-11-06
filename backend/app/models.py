@@ -70,12 +70,14 @@ class LLMConfig(Base):
     aws_access_key_id = Column(String(500))
     aws_secret_access_key = Column(String(500))
     aws_model_id = Column(String(200))  # e.g., "anthropic.claude-v2"
+    aws_thinking_mode = Column(String(20))  # For Claude Sonnet: enabled, disabled (default: enabled)
 
     # Azure OpenAI fields
     azure_endpoint = Column(String(500))  # Azure endpoint URL
     azure_api_key = Column(String(500))
     azure_deployment_name = Column(String(200))  # Azure deployment name
     azure_api_version = Column(String(50), default="2024-02-15-preview")
+    azure_reasoning_effort = Column(String(20))  # For GPT-5: minimal, low, medium, high
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

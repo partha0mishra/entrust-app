@@ -3,11 +3,15 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Dict, Optional
 from collections import Counter
+import logging
+import traceback
+import asyncio
 from .. import models, schemas, auth
 from ..database import get_db
 from ..llm_service import LLMService
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def aggregate_by_facet(
@@ -376,88 +380,127 @@ async def get_dimension_report(
         ).first()
 
     # Generate dimension-level LLM analysis
+    # Use asyncio.create_task to run LLM call in background - don't block the response
     dimension_llm_analysis = None
     llm_error = None
 
+    # Log LLM config status for debugging
+    if llm_config:
+        logger.info(f"LLM config found for dimension '{dimension}': status='{llm_config.status}', provider='{llm_config.provider_type}', model='{llm_config.azure_deployment_name if llm_config.provider_type == models.LLMProviderType.AZURE else (llm_config.aws_model_id if llm_config.provider_type == models.LLMProviderType.BEDROCK else llm_config.model_name)}'")
+        if llm_config.status != "Success":
+            logger.warning(f"LLM config status is '{llm_config.status}' - LLM analysis will be skipped. Please test the connection first.")
+    else:
+        logger.warning(f"No LLM config found for dimension '{dimension}' - using Default config if available")
+
     if llm_config and llm_config.status == "Success":
         try:
-            llm_response = await LLMService.generate_deep_dimension_analysis(
-                llm_config,
-                dimension,
-                overall_metrics,
-                questions_for_llm,
-                category_analysis,
-                process_analysis,
-                lifecycle_analysis
-            )
-
-            if llm_response.get("success"):
-                dimension_llm_analysis = llm_response.get("content")
-            else:
-                llm_error = llm_response.get("error")
+            # Run LLM call with timeout to prevent hanging
+            # With thinking mode enabled, Claude can take 20+ minutes for complex analysis
+            # Check if thinking mode is enabled to adjust timeout
+            is_thinking_mode = getattr(llm_config, 'aws_thinking_mode', None) == 'enabled'
+            timeout_seconds = 1800.0 if is_thinking_mode else 300.0  # 30 min for thinking, 5 min for non-thinking (should be much faster with 8000 max_tokens)
+            
+            try:
+                llm_response = await asyncio.wait_for(
+                    LLMService.generate_deep_dimension_analysis(
+                        llm_config,
+                        dimension,
+                        overall_metrics,
+                        questions_for_llm,
+                        category_analysis,
+                        process_analysis,
+                        lifecycle_analysis
+                    ),
+                    timeout=timeout_seconds
+                )
+                if llm_response.get("success"):
+                    dimension_llm_analysis = llm_response.get("content")
+                else:
+                    llm_error = llm_response.get("error")
+                    logger.error(f"LLM analysis failed for dimension {dimension}: {llm_error}")
+            except asyncio.TimeoutError:
+                timeout_minutes = int(timeout_seconds / 60)
+                llm_error = f"LLM analysis timed out after {timeout_minutes} minutes. {'With thinking mode enabled, this can take 20-30 minutes. ' if is_thinking_mode else ''}Please try again or check LLM configuration."
+                logger.error(f"LLM analysis timed out for dimension {dimension} after {timeout_minutes} minutes (thinking_mode={is_thinking_mode})")
         except Exception as e:
             llm_error = str(e)
+            logger.error(f"Exception generating dimension LLM analysis for {dimension}: {str(e)}\n{traceback.format_exc()}")
 
     # Generate facet-level LLM analyses
+    # Skip these for now to speed up response - they can be added later if needed
     category_llm_analyses = {}
     process_llm_analyses = {}
     lifecycle_llm_analyses = {}
 
-    if llm_config and llm_config.status == "Success":
+    # Note: Facet-level analyses are disabled to speed up response time
+    # They can be re-enabled later if needed, but they significantly slow down the report generation
+    if False and llm_config and llm_config.status == "Success":
         # Category analyses
         for category_name, category_data in category_analysis.items():
             try:
-                llm_response = await LLMService.analyze_facet(
-                    llm_config,
-                    'category',
-                    category_name,
-                    category_data
+                llm_response = await asyncio.wait_for(
+                    LLMService.analyze_facet(
+                        llm_config,
+                        'category',
+                        category_name,
+                        category_data
+                    ),
+                    timeout=300.0  # 5 minute timeout per facet
                 )
                 if llm_response.get("success"):
                     category_llm_analyses[category_name] = llm_response.get("content")
-            except:
-                pass  # Silently skip if analysis fails
+            except (asyncio.TimeoutError, Exception):
+                pass  # Silently skip if analysis fails or times out
 
         # Process analyses
         for process_name, process_data in process_analysis.items():
             try:
-                llm_response = await LLMService.analyze_facet(
-                    llm_config,
-                    'process',
-                    process_name,
-                    process_data
+                llm_response = await asyncio.wait_for(
+                    LLMService.analyze_facet(
+                        llm_config,
+                        'process',
+                        process_name,
+                        process_data
+                    ),
+                    timeout=300.0  # 5 minute timeout per facet
                 )
                 if llm_response.get("success"):
                     process_llm_analyses[process_name] = llm_response.get("content")
-            except:
-                pass
+            except (asyncio.TimeoutError, Exception):
+                pass  # Silently skip if analysis fails or times out
 
         # Lifecycle analyses
         for lifecycle_name, lifecycle_data in lifecycle_analysis.items():
             try:
-                llm_response = await LLMService.analyze_facet(
-                    llm_config,
-                    'lifecycle_stage',
-                    lifecycle_name,
-                    lifecycle_data
+                llm_response = await asyncio.wait_for(
+                    LLMService.analyze_facet(
+                        llm_config,
+                        'lifecycle_stage',
+                        lifecycle_name,
+                        lifecycle_data
+                    ),
+                    timeout=300.0  # 5 minute timeout per facet
                 )
                 if llm_response.get("success"):
                     lifecycle_llm_analyses[lifecycle_name] = llm_response.get("content")
-            except:
-                pass
+            except (asyncio.TimeoutError, Exception):
+                pass  # Silently skip if analysis fails or times out
 
     # Generate comment sentiment analysis with LLM
     comment_llm_analysis = None
     if llm_config and llm_config.status == "Success" and all_comments:
         try:
-            llm_response = await LLMService.analyze_comments_sentiment(
-                llm_config,
-                all_comments
+            llm_response = await asyncio.wait_for(
+                LLMService.analyze_comments_sentiment(
+                    llm_config,
+                    all_comments
+                ),
+                timeout=300.0  # 5 minute timeout
             )
             if llm_response.get("success"):
                 comment_llm_analysis = llm_response.get("content")
-        except:
-            pass
+        except (asyncio.TimeoutError, Exception):
+            pass  # Silently skip if analysis fails or times out
 
     return {
         "dimension": dimension,
@@ -481,7 +524,7 @@ async def get_dimension_report(
         "process_llm_analyses": process_llm_analyses,
         "lifecycle_llm_analyses": lifecycle_llm_analyses,
 
-        "llm_error": llm_error
+        "llm_error": llm_error if llm_error else ("Orchestrate LLM not configured or test not successful" if not (llm_config and llm_config.status == "Success") else None)
     }
 
 
@@ -592,7 +635,8 @@ async def get_overall_report(
                 models.LLMConfig.purpose == dimension
             ).first()
             
-            if not llm_config:
+            # If dimension-specific config doesn't exist or is not tested, fall back to Default
+            if not llm_config or (llm_config and llm_config.status != "Success"):
                 llm_config = db.query(models.LLMConfig).filter(
                     models.LLMConfig.purpose == "Default"
                 ).first()
@@ -636,20 +680,35 @@ async def get_overall_report(
                 models.LLMConfig.purpose == "Default"
             ).first()
         
+        logger.info(f"Orchestrate LLM check: found={orchestrate_llm is not None}, status={orchestrate_llm.status if orchestrate_llm else 'None'}, dimension_summaries_count={len(dimension_summaries)}")
+        
         if orchestrate_llm and orchestrate_llm.status == "Success":
-            llm_response = await LLMService.generate_overall_summary(
-                orchestrate_llm,
-                dimension_summaries
-            )
-
-            if llm_response.get("success"):
-                overall_summary = llm_response.get("content")
+            # Check if we have valid dimension summaries (not all error messages)
+            valid_summaries = {k: v for k, v in dimension_summaries.items() 
+                             if v and not v.startswith("LLM not configured") and not v.startswith("Error:")}
+            
+            if not valid_summaries:
+                overall_error = "No valid dimension summaries available. Please ensure at least one dimension has a tested LLM configuration."
+                logger.warning(f"All dimension summaries are errors: {list(dimension_summaries.values())}")
             else:
-                overall_error = llm_response.get("error")
+                # Use only valid summaries for overall report
+                llm_response = await LLMService.generate_overall_summary(
+                    orchestrate_llm,
+                    valid_summaries
+                )
+
+                if llm_response.get("success"):
+                    # generate_overall_summary returns "markdown_content" not "content"
+                    overall_summary = llm_response.get("markdown_content") or llm_response.get("content")
+                else:
+                    overall_error = llm_response.get("error")
+                    logger.error(f"LLM overall summary generation failed: {overall_error}")
         else:
             overall_error = "Orchestrate LLM not configured or test not successful"
+            logger.warning(f"Orchestrate LLM not available: status={orchestrate_llm.status if orchestrate_llm else 'None'}")
     except Exception as e:
         overall_error = str(e)
+        logger.error(f"Exception generating overall summary: {str(e)}\n{traceback.format_exc()}")
     
     return {
         "customer_code": customer.customer_code if customer else None,

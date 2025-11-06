@@ -20,6 +20,106 @@ const PROVIDER_TYPES = [
   { value: 'AZURE', label: 'Azure OpenAI' }
 ];
 
+// Pre-configured models with credentials
+const AZURE_MODELS = [
+  { 
+    name: 'gpt-4o', 
+    displayName: 'GPT-4o',
+    endpoint: 'https://datapractice-datamapper.openai.azure.com/',
+    apiKey: '', // API key will be filled from api access folder or user input
+    apiVersion: '2024-12-01-preview',
+    supportsReasoning: false
+  },
+  { 
+    name: 'gpt-4o-mini', 
+    displayName: 'GPT-4o-mini',
+    endpoint: 'https://datapractice-datamapper.openai.azure.com/',
+    apiKey: '', // API key will be filled from api access folder or user input
+    apiVersion: '2024-12-01-preview',
+    supportsReasoning: false
+  },
+  { 
+    name: 'gpt-4.1', 
+    displayName: 'GPT-4.1',
+    endpoint: 'https://datapractice-datamapper.openai.azure.com/',
+    apiKey: '', // API key will be filled from api access folder or user input
+    apiVersion: '2024-12-01-preview',
+    supportsReasoning: false
+  },
+  { 
+    name: 'gpt-4.1-mini', 
+    displayName: 'GPT-4.1-mini',
+    endpoint: 'https://datapractice-datamapper.openai.azure.com/',
+    apiKey: '', // API key will be filled from api access folder or user input
+    apiVersion: '2024-12-01-preview',
+    supportsReasoning: false
+  },
+  { 
+    name: 'o3', 
+    displayName: 'O3',
+    endpoint: 'https://datapractice-datamapper.openai.azure.com/',
+    apiKey: '', // API key will be filled from api access folder or user input
+    apiVersion: '2024-12-01-preview',
+    supportsReasoning: false
+  },
+  { 
+    name: 'o3-mini', 
+    displayName: 'O3-mini',
+    endpoint: 'https://datapractice-datamapper.openai.azure.com/',
+    apiKey: '', // API key will be filled from api access folder or user input
+    apiVersion: '2024-12-01-preview',
+    supportsReasoning: false
+  },
+  { 
+    name: 'gpt-5', 
+    displayName: 'GPT-5',
+    endpoint: 'https://datapractice-datamapper.openai.azure.com/',
+    apiKey: '', // API key will be filled from api access folder or user input
+    apiVersion: '2024-12-01-preview',
+    supportsReasoning: true,
+    defaultReasoningEffort: 'medium'
+  },
+  { 
+    name: 'gpt-5-mini', 
+    displayName: 'GPT-5-mini',
+    endpoint: 'https://datapractice-datamapper.openai.azure.com/',
+    apiKey: '', // API key will be filled from api access folder or user input
+    apiVersion: '2024-12-01-preview',
+    supportsReasoning: true,
+    defaultReasoningEffort: 'medium'
+  },
+  { 
+    name: 'gpt-5-nano', 
+    displayName: 'GPT-5-nano',
+    endpoint: 'https://datapractice-datamapper.openai.azure.com/',
+    apiKey: '', // API key will be filled from api access folder or user input
+    apiVersion: '2024-12-01-preview',
+    supportsReasoning: true,
+    defaultReasoningEffort: 'medium'
+  }
+];
+
+const BEDROCK_MODELS = [
+  {
+    name: 'anthropic.claude-3-5-sonnet-20240620-v1:0',
+    displayName: 'Claude 3.5 Sonnet',
+    region: 'us-east-1',
+    accessKeyId: '', // AWS access key will be filled from api access folder or user input
+    secretAccessKey: '', // AWS secret key will be filled from api access folder or user input
+    supportsThinking: true,
+    defaultThinkingMode: 'enabled'
+  },
+  {
+    name: 'arn:aws:bedrock:us-east-1:971879487154:inference-profile/global.anthropic.claude-sonnet-4-5-20250929-v1:0',
+    displayName: 'Claude Sonnet 4.5 (Inference Profile)',
+    region: 'us-east-1',
+    accessKeyId: '', // AWS access key will be filled from api access folder or user input
+    secretAccessKey: '', // AWS secret key will be filled from api access folder or user input
+    supportsThinking: true,
+    defaultThinkingMode: 'enabled'
+  }
+];
+
 export default function LLMConfig() {
   const [configs, setConfigs] = useState([]);
   const [formData, setFormData] = useState({});
@@ -41,22 +141,34 @@ export default function LLMConfig() {
       
       const initialFormData = {};
       LLM_PURPOSES.forEach(purpose => {
-        initialFormData[purpose] = configMap[purpose] || {
-          purpose,
-          provider_type: 'LOCAL',
-          model_name: 'default',
-          api_url: '',
-          api_key: '',
-          aws_region: '',
-          aws_access_key_id: '',
-          aws_secret_access_key: '',
-          aws_model_id: '',
-          azure_endpoint: '',
-          azure_api_key: '',
-          azure_deployment_name: '',
-          azure_api_version: '2024-02-15-preview',
-          status: 'Not Tested'
-        };
+        // If config exists, use it (including status from DB)
+        // If not, create new one with "Not Tested" status
+        if (configMap[purpose]) {
+          initialFormData[purpose] = {
+            ...configMap[purpose],
+            // Ensure status is explicitly set from backend
+            status: configMap[purpose].status || 'Not Tested'
+          };
+        } else {
+          initialFormData[purpose] = {
+            purpose,
+            provider_type: 'LOCAL',
+            model_name: 'default',
+            api_url: '',
+            api_key: '',
+            aws_region: '',
+            aws_access_key_id: '',
+            aws_secret_access_key: '',
+            aws_model_id: '',
+            azure_endpoint: '',
+            azure_api_key: '',
+            azure_deployment_name: '',
+            azure_api_version: '2024-12-01-preview',
+            azure_reasoning_effort: null,
+            aws_thinking_mode: null,
+            status: 'Not Tested'
+          };
+        }
       });
       setFormData(initialFormData);
     } catch (error) {
@@ -72,6 +184,40 @@ export default function LLMConfig() {
         [field]: value
       }
     }));
+  };
+
+  const handleModelSelect = (purpose, providerType, modelName) => {
+    if (providerType === 'AZURE') {
+      const model = AZURE_MODELS.find(m => m.name === modelName);
+      if (model) {
+        setFormData(prev => ({
+          ...prev,
+          [purpose]: {
+            ...prev[purpose],
+            azure_deployment_name: model.name,
+            azure_endpoint: model.endpoint,
+            azure_api_key: model.apiKey,
+            azure_api_version: model.apiVersion,
+            azure_reasoning_effort: model.defaultReasoningEffort || null
+          }
+        }));
+      }
+    } else if (providerType === 'BEDROCK') {
+      const model = BEDROCK_MODELS.find(m => m.name === modelName);
+      if (model) {
+        setFormData(prev => ({
+          ...prev,
+          [purpose]: {
+            ...prev[purpose],
+            aws_model_id: model.name,
+            aws_region: model.region,
+            aws_access_key_id: model.accessKeyId,
+            aws_secret_access_key: model.secretAccessKey,
+            aws_thinking_mode: model.defaultThinkingMode || null
+          }
+        }));
+      }
+    }
   };
 
   const validateConfig = (config) => {
@@ -165,11 +311,14 @@ export default function LLMConfig() {
     try {
       const response = await llmAPI.createOrUpdate(config);
 
+      // Update formData with the response from backend, including status
+      // The backend will return "Not Tested" if critical fields changed, or preserve existing status
       setFormData(prev => ({
         ...prev,
         [purpose]: {
           ...prev[purpose],
-          id: response.data.id
+          id: response.data.id,
+          status: response.data.status || 'Not Tested'  // Always update status from backend
         }
       }));
 
@@ -228,6 +377,22 @@ export default function LLMConfig() {
 
         {providerType === 'BEDROCK' && (
           <>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Select Model (Auto-fills credentials)</label>
+              <select
+                value={config?.aws_model_id || ''}
+                onChange={(e) => handleModelSelect(purpose, 'BEDROCK', e.target.value)}
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
+              >
+                <option value="">-- Select a model --</option>
+                {BEDROCK_MODELS.map(model => (
+                  <option key={model.name} value={model.name}>
+                    {model.displayName}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">Credentials will be auto-filled but remain editable below</p>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">AWS Region *</label>
               <input
@@ -268,11 +433,45 @@ export default function LLMConfig() {
                 className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
               />
             </div>
+            {(() => {
+              const selectedModel = BEDROCK_MODELS.find(m => m.name === config?.aws_model_id);
+              const isSonnet = selectedModel?.supportsThinking || false;
+              return isSonnet ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Extended Thinking Mode (Claude Sonnet)</label>
+                  <select
+                    value={config?.aws_thinking_mode || 'enabled'}
+                    onChange={(e) => handleChange(purpose, 'aws_thinking_mode', e.target.value)}
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
+                  >
+                    <option value="enabled">Enabled (Better for complex reasoning)</option>
+                    <option value="disabled">Disabled (Faster responses)</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Enables extended thinking mode for complex tasks</p>
+                </div>
+              ) : null;
+            })()}
           </>
         )}
 
         {providerType === 'AZURE' && (
           <>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Select Model (Auto-fills credentials)</label>
+              <select
+                value={config?.azure_deployment_name || ''}
+                onChange={(e) => handleModelSelect(purpose, 'AZURE', e.target.value)}
+                className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
+              >
+                <option value="">-- Select a model --</option>
+                {AZURE_MODELS.map(model => (
+                  <option key={model.name} value={model.name}>
+                    {model.displayName}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">Credentials will be auto-filled but remain editable below</p>
+            </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Azure Endpoint *</label>
               <input
@@ -307,12 +506,32 @@ export default function LLMConfig() {
               <label className="block text-sm font-medium text-gray-700 mb-1">API Version</label>
               <input
                 type="text"
-                value={config?.azure_api_version || '2024-02-15-preview'}
+                value={config?.azure_api_version || '2024-12-01-preview'}
                 onChange={(e) => handleChange(purpose, 'azure_api_version', e.target.value)}
-                placeholder="2024-02-15-preview"
+                placeholder="2024-12-01-preview"
                 className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
               />
             </div>
+            {(() => {
+              const selectedModel = AZURE_MODELS.find(m => m.name === config?.azure_deployment_name);
+              const isGPT5 = selectedModel?.supportsReasoning || false;
+              return isGPT5 ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Reasoning Effort (GPT-5 only)</label>
+                  <select
+                    value={config?.azure_reasoning_effort || 'medium'}
+                    onChange={(e) => handleChange(purpose, 'azure_reasoning_effort', e.target.value)}
+                    className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-encora-green"
+                  >
+                    <option value="minimal">Minimal (Fastest, minimal reasoning)</option>
+                    <option value="low">Low (Fast, light reasoning)</option>
+                    <option value="medium">Medium (Balanced, default)</option>
+                    <option value="high">High (Slowest, maximum reasoning)</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Controls depth of reasoning tokens used by GPT-5</p>
+                </div>
+              ) : null;
+            })()}
           </>
         )}
       </div>

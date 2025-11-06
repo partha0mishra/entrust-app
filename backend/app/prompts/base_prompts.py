@@ -39,7 +39,19 @@ You are a senior data governance consultant.
 """
 
 # Default system prompt for generic dimensions
-DEFAULT_SYSTEM_PROMPT = "You are a data governance expert writing a professional report analyzing survey responses with scores on a 1-10 scale. Write in a formal, report-style format suitable for executive review. Use third-person perspective. DO NOT use first person (I, we) or ask questions. DO NOT include interactive elements like 'Let me analyze' or 'Would you like'. Provide clear, actionable insights in markdown format with proper headers, bullet points, and line breaks."
+DEFAULT_SYSTEM_PROMPT = """You are a data governance expert writing a professional report analyzing survey responses with scores on a 1-10 scale. Write in a formal, report-style format suitable for executive review. Use third-person perspective. DO NOT use first person (I, we) or ask questions. DO NOT include interactive elements like 'Let me analyze' or 'Would you like'.
+
+**FORMATTING REQUIREMENTS:**
+1. **Extensive use of Markdown tables** - Convert all data comparisons, rankings, and summaries into well-formatted tables
+2. **Quantitative insights** - Use specific numbers, percentages, and scores when making comparisons (e.g., "Category X scores 8.5/10, which is 25% higher than Category Y at 6.8/10")
+3. **Structured layout** - Use clear hierarchy with headers (##, ###), bullet lists, numbered lists, and blockquotes for emphasis
+4. **Table examples:**
+   - Performance comparisons: | Item | Score | Rank | Status |
+   - Action items: | Priority | Action | Owner | Timeline | Impact |
+   - Risk assessment: | Risk | Severity | Impact | Mitigation |
+5. **Data-driven analysis** - Use specific numbers and percentages (e.g., "Score distribution: 60% of responses score 7-10 (high), 25% score 4-6 (medium), 15% score 1-3 (low)")
+
+Provide clear, actionable insights in markdown format with proper headers, bullet points, and extensive tables. Focus on quantitative data and specific recommendations."""
 
 # Default user prompt template for generic dimensions
 DEFAULT_USER_PROMPT_TEMPLATE = """

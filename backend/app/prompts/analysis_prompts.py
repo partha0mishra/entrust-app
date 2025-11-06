@@ -12,59 +12,115 @@ def get_deep_dimension_analysis_prompt(
     """Generate prompt for deep dimension analysis"""
     return f"""As a data governance expert, provide a comprehensive analysis of the {dimension} dimension.
 
-METRICS:
-- Average Score: {overall_metrics['avg_score']}/10
-- Response Rate: {overall_metrics['response_rate']}
-- Score Range: {overall_metrics['min_score']} - {overall_metrics['max_score']}
-- Total Responses: {overall_metrics['total_responses']}
+## METRICS OVERVIEW
+| Metric | Value |
+|--------|-------|
+| Average Score | {overall_metrics['avg_score']}/10 |
+| Response Rate | {overall_metrics['response_rate']} |
+| Score Range | {overall_metrics['min_score']} - {overall_metrics['max_score']} |
+| Total Responses | {overall_metrics['total_responses']} |
+| Total Respondents | {overall_metrics.get('total_respondents', 'N/A')} |
 
-CATEGORY BREAKDOWN:
+## BREAKDOWN DATA
+
+### Category Breakdown:
 {category_text}
 
-PROCESS BREAKDOWN:
+### Process Breakdown:
 {process_text}
 
-LIFECYCLE STAGE BREAKDOWN:
+### Lifecycle Stage Breakdown:
 {lifecycle_text}
 
-Provide a comprehensive analysis with the following sections:
+---
 
-## Strategic Observations
-- What do these scores indicate about organizational maturity in {dimension}?
-- Which areas show strength vs weakness?
-- Are there concerning patterns or trends?
+## REQUIRED OUTPUT FORMAT
 
-## Category Analysis
-- Compare category performance
-- Identify highest/lowest performing categories
-- Explain potential reasons for category performance differences
+### 1. Executive Summary (Table Format)
+Create a summary table showing:
+| Aspect | Status | Score | Key Insight |
+|--------|--------|-------|-------------|
+| Overall Maturity | [Critical/Low/Medium/High/Excellent] | {overall_metrics['avg_score']}/10 | [One sentence] |
+| Top Strength | [Category/Process] | [Score] | [Why it's strong] |
+| Top Weakness | [Category/Process] | [Score] | [Why it's weak] |
+| Risk Level | [Low/Medium/High/Critical] | - | [Risk description] |
 
-## Process Analysis
-- Which processes need attention?
-- Are processes balanced or showing uneven maturity?
-- What process improvements should be prioritized?
+### 2. Category Performance Comparison (MUST USE TABLE)
+Create a table comparing all categories:
+| Category | Avg Score | Responses | % High (8-10) | % Low (1-4) | Rank | Trend | Key Issue |
+|----------|-----------|-----------|---------------|-------------|------|-------|-----------|
+| [Category 1] | [X.X] | [N] | [X%] | [X%] | [1-5] | [Up/Down/Stable] | [Brief description] |
+| [Category 2] | [X.X] | [N] | [X%] | [X%] | [1-5] | [Up/Down/Stable] | [Brief description] |
 
-## Lifecycle Analysis
-- Which lifecycle stages are problematic?
-- Is there evidence of progression issues?
-- What lifecycle improvements are needed?
+**Key Insight:** Provide a one-sentence summary of the most important finding from this comparison.
 
-## Actionable Recommendations
-Provide 5-7 specific, prioritized actions organized by timeframe:
+### 3. Process Analysis (MUST USE TABLE)
+Create a table analyzing all processes:
+| Process | Avg Score | Maturity Level | Key Gaps | Priority | Recommended Tools |
+|---------|-----------|----------------|----------|----------|-------------------|
+| [Process 1] | [X.X] | [Low/Medium/High] | [3-5 specific gaps] | [High/Medium/Low] | [Tool names] |
+| [Process 2] | [X.X] | [Low/Medium/High] | [3-5 specific gaps] | [High/Medium/Low] | [Tool names] |
 
-**Quick Wins (< 3 months):**
-- [specific actions that can be completed quickly]
+### 4. Lifecycle Stage Analysis (MUST USE TABLE)
+Create a table for lifecycle stages:
+| Lifecycle Stage | Avg Score | Maturity Note | Improvement Priority | Action Items Count |
+|-----------------|-----------|---------------|----------------------|-------------------|
+| [Stage 1] | [X.X] | [Assessment] | [High/Medium/Low] | [N] |
 
-**Medium-term Improvements (3-6 months):**
-- [actions requiring more planning and resources]
+### 5. Risk Matrix (MUST USE TABLE)
+Create a risk assessment table:
+| Risk | Severity | Likelihood | Impact | Urgency | Mitigation Strategy |
+|------|----------|------------|--------|---------|-------------------|
+| [Risk 1] | [Critical/High/Medium/Low] | [High/Medium/Low] | [High/Medium/Low] | [Immediate/Short-term/Long-term] | [Strategy] |
 
-**Strategic Initiatives (6-12 months):**
-- [major transformational efforts]
+### 6. Prioritized Action Plan (MUST USE TABLE)
+Create a comprehensive action table:
+| Priority | Action Item | Owner Role | Timeline | Expected Impact | Success Metrics | Framework Reference |
+|----------|-------------|------------|----------|-----------------|-----------------|---------------------|
+| 1 (High) | [Specific action] | [Role] | [Timeframe] | [High/Medium/Low] | [Metric] | [DAMA/ISO/GDPR/etc] |
+| 2 (High) | [Specific action] | [Role] | [Timeframe] | [High/Medium/Low] | [Metric] | [Framework] |
 
-Format your response in markdown with clear headers and bullet points. Be specific and actionable."""
+**Organize by timeframe:**
+- **Quick Wins (< 3 months):** [List from table]
+- **Medium-term (3-6 months):** [List from table]
+- **Strategic Initiatives (6-12 months):** [List from table]
+
+### 7. Key Insights Summary
+Provide concise, actionable insights based on the data:
+- **Top Performers:** List the 2-3 highest scoring categories/processes with specific scores
+- **Critical Gaps:** List the 2-3 lowest scoring areas that need immediate attention
+- **Patterns:** Identify any notable patterns or correlations (e.g., "Processes in [category] consistently score higher")
+- **Recommendations:** Top 3 priority recommendations based on the analysis
+
+### 8. Strategic Observations
+- [3-5 key insights with evidence from the data]
+- Each insight should reference specific scores, categories, or processes
+- Link to frameworks (DAMA-DMBOK, ISO 8000, GDPR, NIST)
+
+### 9. Question-Level Analysis (Table Format)
+| Question ID | Question Text | Category | Process | Avg Score | Min | Max | Responses | Key Comment |
+|-------------|---------------|----------|---------|-----------|-----|-----|------------|-------------|
+| [Q#] | [Text] | [Cat] | [Proc] | [X.X] | [X] | [X] | [N] | [Quote] |
+
+---
+
+**CRITICAL:** Use markdown tables extensively. Make the report visually scannable with clear tables, proper formatting, and visual descriptions. Be specific and actionable."""
 
 
-DEEP_DIMENSION_ANALYSIS_SYSTEM_PROMPT = "You are a senior data governance expert writing a professional strategic report. Write in a formal, report-style format suitable for executive review. Use third-person perspective. Provide clear, actionable insights in markdown format with proper headers, bullet points, and line breaks."
+DEEP_DIMENSION_ANALYSIS_SYSTEM_PROMPT = """You are a senior data governance expert writing a professional strategic report. Write in a formal, report-style format suitable for executive review. Use third-person perspective.
+
+**CRITICAL FORMATTING REQUIREMENTS:**
+1. **Use Markdown tables extensively** - Convert all comparisons, rankings, and data summaries into well-formatted tables
+2. **Data-driven insights** - When describing trends or comparisons, use specific numbers and percentages (e.g., "Category X scores 8.5/10, which is 30% higher than Category Y at 6.5/10")
+3. **Structure for readability** - Use clear hierarchy with headers (##, ###), bullet lists, numbered lists, and blockquotes for key insights
+4. **Code blocks for metrics** - Use code blocks or emphasis for key metrics (scores, percentages, etc.)
+5. **Table format examples:**
+   - Performance comparisons: | Category | Score | Rank | Trend |
+   - Action items: | Priority | Action | Owner | Timeline | Impact |
+   - Risk matrix: | Risk | Severity | Likelihood | Impact |
+6. **Quantitative insights** - Use specific numbers and percentages (e.g., "Score distribution: 60% of responses score 7-10 (high), 25% score 4-6 (medium), 15% score 1-3 (low)")
+
+Provide clear, actionable insights in markdown format with proper headers, bullet points, and extensive tables. Focus on quantitative data and specific recommendations."""
 
 
 def get_facet_analysis_prompt(
