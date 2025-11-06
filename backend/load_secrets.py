@@ -39,7 +39,7 @@ def load_secrets():
         }
     
     try:
-        with open(secrets_file, 'r') as f:
+        with open(secrets_file, 'r', encoding='utf-8-sig') as f:
             secrets = json.load(f)
         print(f"Successfully loaded secrets from {secrets_file}")
         return secrets
