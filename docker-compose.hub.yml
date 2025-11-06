@@ -32,9 +32,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      # Optional: Mount local backend for development (works on Windows, Mac, Linux)
+      - ./backend:/app
+      # Optional: Mount questions.json if available locally
+      - ./questions.json:/app/questions.json:ro
     networks:
       - entrust_network
-    # Platform-independent: works on Windows, Mac, Linux (Docker Desktop)
+    # Platform-independent host gateway (works on Windows, Mac, Linux with Docker Desktop)
     extra_hosts:
       - host.docker.internal:host-gateway
     command: >
@@ -61,12 +66,31 @@ services:
       VITE_API_URL: http://localhost:8000
     depends_on:
       - backend
+    volumes:
+      # Optional: Mount local frontend for development (works on Windows, Mac, Linux)
+      - ./frontend:/app
+      # Optional: Mount backend for secrets loading
+      - ./backend:/backend:ro
+      # Optional: Mount secrets.json if available (read-only)
+      - ./secrets.json:/secrets.json:ro
+      # Anonymous volume for node_modules (platform-independent)
+      - /app/node_modules
     networks:
       - entrust_network
     stdin_open: true
     tty: true
     command: >
       sh -c "
+        echo 'Loading secrets and generating frontend config...' &&
+        if [ -f /backend/load_secrets.py ]; then
+          if command -v python3 &> /dev/null; then
+            python3 /backend/load_secrets.py || echo 'Warning: Failed to load secrets, continuing without them...'
+          else
+            echo 'Python3 not found, skipping secrets loading.'
+          fi
+        else
+          echo 'Secrets file not found, continuing without secrets...'
+        fi &&
         echo 'Starting frontend development server...' &&
         npm run dev
       "

@@ -1,20 +1,14 @@
-# 🚀 One-Line Command to Run Entrust
+# 📤 Share This With Your Team
 
-## For Your Teammates
+## One-Line Command (Copy & Paste)
 
-### Option 1: Using curl (Mac, Linux, Windows with Git Bash/WSL) - Recommended
+### For Mac/Linux/Windows (Git Bash/WSL):
 
 ```bash
 curl -L "https://drive.google.com/uc?export=download&id=1LDOOhQCsrP3zpdSujKWUVfndr4NFeAPD" -o docker-compose.standalone.yml && docker compose -f docker-compose.standalone.yml up
 ```
 
-### Option 2: Using wget (Linux, Mac)
-
-```bash
-wget --no-check-certificate "https://drive.google.com/uc?export=download&id=1LDOOhQCsrP3zpdSujKWUVfndr4NFeAPD" -O docker-compose.standalone.yml && docker compose -f docker-compose.standalone.yml up
-```
-
-### Option 3: PowerShell (Windows)
+### For Windows PowerShell:
 
 ```powershell
 Invoke-WebRequest -Uri "https://drive.google.com/uc?export=download&id=1LDOOhQCsrP3zpdSujKWUVfndr4NFeAPD" -OutFile "docker-compose.standalone.yml"; docker compose -f docker-compose.standalone.yml up
@@ -22,14 +16,16 @@ Invoke-WebRequest -Uri "https://drive.google.com/uc?export=download&id=1LDOOhQCs
 
 ---
 
-## What Happens
+## What It Does
 
-1. Downloads the `docker-compose.standalone.yml` file from GitHub
-2. Pulls images from Docker Hub (kshitij001/entrust-backend, kshitij001/entrust-frontend)
-3. Starts PostgreSQL, Backend, and Frontend
-4. Auto-initializes database with admin user and questions
+1. ✅ Downloads the docker-compose file from GitHub
+2. ✅ Pulls images from Docker Hub (multi-platform: Windows, Mac Intel, Mac M1/M2/M3, Linux)
+3. ✅ Starts PostgreSQL database
+4. ✅ Starts Backend API (port 8000)
+5. ✅ Starts Frontend (port 3000)
+6. ✅ Auto-initializes database with admin user and 700 questions
 
-## Access
+## Access After Running
 
 - **Frontend:** http://localhost:3000
 - **Backend API:** http://localhost:8000
@@ -47,7 +43,14 @@ Invoke-WebRequest -Uri "https://drive.google.com/uc?export=download&id=1LDOOhQCs
 - Docker Desktop (Windows/Mac) or Docker Engine + Compose (Linux)
 - Ports 3000, 8000, 5432 available
 
+## Stop the Application
+
+Press `Ctrl+C` or run:
+```bash
+docker compose -f docker-compose.standalone.yml down
+```
+
 ---
 
-**That's it! One command and you're running!** 🎉
+**That's it! One command and you're running!** 🚀
 

@@ -31,6 +31,7 @@ Available Migrations:
 
 import sys
 import json
+import os
 import argparse
 import logging
 from sqlalchemy import text, inspect
@@ -163,7 +164,24 @@ class DatabaseDeployment:
         question_count = self.db.query(models.Question).count()
         if question_count == 0:
             try:
-                with open('questions.json', 'r', encoding='utf-8') as f:
+                # Try multiple possible locations for questions.json
+                questions_file = None
+                possible_paths = [
+                    'questions.json',  # Current directory
+                    '/app/questions.json',  # App root in Docker
+                    os.path.join(os.path.dirname(__file__), '..', 'questions.json'),  # Parent directory
+                    os.path.join(os.path.dirname(os.path.dirname(__file__)), 'questions.json')  # Root
+                ]
+                
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        questions_file = path
+                        break
+                
+                if not questions_file:
+                    raise FileNotFoundError("questions.json not found in any expected location")
+                
+                with open(questions_file, 'r', encoding='utf-8') as f:
                     questions_data = json.load(f)
 
                 logger.info(f"Found {len(questions_data)} questions in file.")
