@@ -9,7 +9,7 @@ def init_database():
     # Create all tables
     print("Creating database tables...")
     models.Base.metadata.create_all(bind=engine)
-    print("✅ Tables created successfully!")
+    print("[OK] Tables created successfully!")
     
     db = SessionLocal()
     
@@ -21,20 +21,22 @@ def init_database():
         
         if not admin_user:
             print("\nCreating default admin user...")
+            default_password = "Welcome123!"
             admin_user = models.User(
                 user_id="admin",
                 username="System Administrator",
-                password_hash=auth.get_password_hash("admin123"),
+                password_hash=auth.get_password_hash(default_password),
+                password=auth.encrypt_password(default_password),  # For viewing in admin UI
                 user_type=models.UserType.SYSTEM_ADMIN,
                 customer_id=None
             )
             db.add(admin_user)
             db.commit()
-            print("✅ Default admin user created!")
+            print("[OK] Default admin user created!")
             print("   User ID: admin")
-            print("   Password: admin123")
+            print("   Password: Welcome123!")
         else:
-            print("\n⚠️  Admin user already exists, skipping creation.")
+            print("\n[INFO] Admin user already exists, skipping creation.")
         
         # Load questions from JSON file
         question_count = db.query(models.Question).count()
@@ -60,45 +62,45 @@ def init_database():
                     db.add(question)
                 
                 db.commit()
-                print(f"✅ Loaded {len(questions_data)} questions into database!")
+                print(f"[OK] Loaded {len(questions_data)} questions into database!")
                 
                 # Show dimension summary
                 dimensions = db.query(models.Question.dimension).distinct().all()
-                print(f"\n📊 Questions loaded across {len(dimensions)} dimensions:")
+                print(f"\nQuestions loaded across {len(dimensions)} dimensions:")
                 for dim in dimensions:
                     count = db.query(models.Question).filter(
                         models.Question.dimension == dim[0]
                     ).count()
-                    print(f"   • {dim[0]}: {count} questions")
+                    print(f"   - {dim[0]}: {count} questions")
                     
             except FileNotFoundError:
-                print("❌ ERROR: questions.json file not found!")
+                print("[ERROR] questions.json file not found!")
                 print("   Please place questions.json in the backend directory.")
             except json.JSONDecodeError as e:
-                print(f"❌ ERROR: Invalid JSON in questions.json: {e}")
+                print(f"[ERROR] Invalid JSON in questions.json: {e}")
         else:
-            print(f"\n⚠️  Questions already loaded ({question_count} questions), skipping.")
+            print(f"\n[INFO] Questions already loaded ({question_count} questions), skipping.")
         
         print("\n" + "="*50)
-        print("🎉 Database initialization complete!")
+        print("[OK] Database initialization complete!")
         print("="*50)
-        print("\n📝 Summary:")
-        print(f"   • Tables: Created")
-        print(f"   • Admin User: {'Created' if not admin_user else 'Already exists'}")
-        print(f"   • Questions: {db.query(models.Question).count()} loaded")
-        print(f"   • Customers: {db.query(models.Customer).count()}")
-        print(f"   • Users: {db.query(models.User).count()}")
-        print("\n🚀 You can now start using the application!")
+        print("\nSummary:")
+        print(f"   - Tables: Created")
+        print(f"   - Admin User: {'Created' if not admin_user else 'Already exists'}")
+        print(f"   - Questions: {db.query(models.Question).count()} loaded")
+        print(f"   - Customers: {db.query(models.Customer).count()}")
+        print(f"   - Users: {db.query(models.User).count()}")
+        print("\nYou can now start using the application!")
         print("   Frontend: http://localhost:3000")
         print("   Backend API: http://localhost:8000")
         print("   API Docs: http://localhost:8000/docs")
-        print("\n🔑 Login credentials:")
+        print("\nLogin credentials:")
         print("   User ID: admin")
-        print("   Password: admin123")
+        print("   Password: Welcome123!")
         print()
         
     except Exception as e:
-        print(f"\n❌ Error initializing database: {e}")
+        print(f"\n[ERROR] Error initializing database: {e}")
         db.rollback()
         raise
     finally:
