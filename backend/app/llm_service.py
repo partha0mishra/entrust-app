@@ -21,13 +21,65 @@ from .prompts import (
     CONSOLIDATION_SYSTEM_PROMPT
 )
 
+# Import RAG service for context retrieval
+try:
+    from .rag import get_rag_service, get_dimension_context
+    RAG_AVAILABLE = True
+except ImportError:
+    RAG_AVAILABLE = False
+    import logging
+    logging.getLogger(__name__).warning("RAG service not available. Install dependencies: pip install chromadb sentence-transformers")
+
 class LLMService:
     # Approximate token estimation: ~4 characters per token
     CHARS_PER_TOKEN = 4
     MAX_TOKENS_PER_CHUNK = 5000
     MAX_CHARS_PER_CHUNK = MAX_TOKENS_PER_CHUNK * CHARS_PER_TOKEN  # ~20,000 chars
     LLM_TIMEOUT = 180.0  # 3 minutes
-    
+
+    @staticmethod
+    def _get_rag_context(dimension: str, survey_metrics: Optional[Dict] = None) -> str:
+        """
+        Retrieve RAG context for a dimension
+
+        Args:
+            dimension: Dimension name
+            survey_metrics: Optional survey metrics for context-aware retrieval
+
+        Returns:
+            Formatted RAG context string
+        """
+        if not RAG_AVAILABLE:
+            return ""
+
+        try:
+            # Build survey summary for context-aware retrieval
+            survey_summary = None
+            if survey_metrics:
+                avg_score = survey_metrics.get('avg_score', 'N/A')
+                response_rate = survey_metrics.get('response_rate', 'N/A')
+                survey_summary = f"Average score: {avg_score}/10, Response rate: {response_rate}"
+
+            # Get RAG context
+            context = get_dimension_context(dimension, survey_summary)
+
+            if context:
+                # Format context for injection into prompt
+                formatted_context = f"\n\n{'='*60}\n"
+                formatted_context += "### RAG-ENHANCED CONTEXT: Industry Standards & Best Practices\n"
+                formatted_context += f"{'='*60}\n\n"
+                formatted_context += context
+                formatted_context += f"\n\n{'='*60}\n"
+                formatted_context += "**INSTRUCTION**: Use the above context to ground your analysis in established frameworks and standards.\n"
+                formatted_context += f"{'='*60}\n\n"
+                return formatted_context
+
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Error retrieving RAG context: {e}")
+
+        return ""
+
     @staticmethod
     async def test_llm_connection(config) -> Dict:
         """Test LLM connection using the appropriate provider"""
@@ -122,6 +174,9 @@ class LLMService:
 
             chunk_summaries = []
 
+            # Get RAG context for this dimension (once for all chunks)
+            rag_context = LLMService._get_rag_context(dimension)
+
             # Process each chunk
             for i, chunk in enumerate(chunks):
                 # Get dimension-specific prompts or use defaults
@@ -145,13 +200,18 @@ Questions and Responses:
                     chunk_prompt += f"Process: {q.get('process', 'N/A')}\n"
                     chunk_prompt += f"Lifecycle Stage: {q.get('lifecycle_stage', 'N/A')}\n"
                     chunk_prompt += f"Average Score: {q.get('avg_score', 'N/A')}\n"
-                    
+
                     comments = q.get('comments', [])
                     if comments:
                         chunk_prompt += f"Sample Comments:\n"
                         # Limit comments to avoid too much data
                         for comment in comments[:5]:  # Max 5 comments per question
                             chunk_prompt += f"  - {comment}\n"
+
+                # Inject RAG context before the template
+                if rag_context:
+                    chunk_prompt += rag_context
+
                 chunk_prompt += user_prompt_template
                 
                 messages = [
@@ -258,6 +318,11 @@ Questions and Responses:
                 process_text,
                 lifecycle_text
             )
+
+            # Inject RAG context
+            rag_context = LLMService._get_rag_context(dimension, overall_metrics)
+            if rag_context:
+                prompt = rag_context + "\n\n" + prompt
 
             messages = [
                 {

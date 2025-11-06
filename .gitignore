@@ -76,6 +76,10 @@ htmlcov/
 backend/output/
 *.pdf
 
+# RAG Knowledge Base & Vector Store
+backend/Knowledge/
+backend/chroma_db/
+
 # Docker
 docker-compose.override.yml
 

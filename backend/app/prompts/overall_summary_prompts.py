@@ -29,6 +29,40 @@ OVERALL_SUMMARY_SECTIONS = """
 ### 6. Roadmap for Maturity Improvement
 - Phased recommendations (Short/Mid/Long-term)
 - Metrics for tracking progress (e.g., KPI dashboards)
+
+### 7. Organizational Maturity Assessment
+
+#### Overall Maturity Profile
+Synthesize maturity assessments across all dimensions:
+
+| Dimension | DAMA-DMBOK Level | Gartner EIM Level | Overall Maturity (1-5) | Key Strengths | Critical Gaps |
+|-----------|------------------|-------------------|----------------------|---------------|---------------|
+| [Dimension 1] | [Level] | [Level] | [X.X/5] | [Strengths] | [Gaps] |
+| [Dimension 2] | [Level] | [Level] | [X.X/5] | [Strengths] | [Gaps] |
+
+**Enterprise Maturity Score**: [X.X/5.0]
+
+#### Cross-Dimension Maturity Insights
+- Identify patterns across dimensions (e.g., strong in monitoring, weak in prevention)
+- Highlight interdependencies affecting maturity (e.g., governance gaps impacting quality)
+- Assess organizational readiness for maturity advancement
+
+#### Unified Maturity Progression Strategy
+
+**Phase 1 (0-6 months) - Foundation Building**:
+- Quick wins across all dimensions
+- Critical capability gaps
+- Cross-functional initiatives
+
+**Phase 2 (6-12 months) - Capability Enhancement**:
+- Process standardization
+- Technology enablement
+- Training and change management
+
+**Phase 3 (12-24 months) - Optimization**:
+- Advanced capabilities
+- Continuous improvement
+- Innovation and excellence
 """
 
 OVERALL_SUMMARY_SYSTEM_PROMPT = OVERALL_SUMMARY_PROMPT_ADD_ON + "You are a **senior data management consultant** tasked with synthesizing insights across multiple data management dimensions. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. The analysis is based on survey responses with scores on a 1-10 scale."

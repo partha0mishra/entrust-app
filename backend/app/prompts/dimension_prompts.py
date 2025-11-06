@@ -137,6 +137,76 @@ For **each Stage** (e.g., Creation, Usage, Archival):
 
 ---
 
+###  Organizational Maturity Assessment
+
+Evaluate the organization's maturity level in this dimension using established maturity models:
+
+#### Maturity Level Analysis
+Map current survey scores and themes to maturity levels from multiple frameworks:
+
+| Framework | Current Level | Key Indicators | Maturity Score (1-5) |
+|-----------|---------------|----------------|---------------------|
+| **DAMA-DMBOK** | [Initial/Repeatable/Defined/Managed/Optimized] | [Evidence from survey] | [X/5] |
+| **Gartner EIM** | [Awareness/Reactive/Intentional/Managed/Effective] | [Evidence from survey] | [X/5] |
+| **CMMI/DMM** | [Initial/Managed/Defined/Quantitatively Managed/Optimizing] | [Evidence from survey] | [X/5] |
+
+**Overall Maturity Assessment**: [X.X/5.0]
+
+#### Maturity Level Description
+- **Current State**: [Detailed description of current maturity based on survey scores]
+  - Avg score of X.X indicates [maturity level]
+  - Key characteristics observed: [list 3-5 observations]
+  - Alignment with maturity models: [explain positioning]
+
+#### Gap Analysis
+Identify gaps between current and target maturity levels:
+
+| Gap Area | Current Capability | Target Capability | Priority | Impact |
+|----------|-------------------|-------------------|----------|--------|
+| [Area] | [Description] | [Description] | High/Med/Low | [Impact description] |
+
+**Critical Gaps** (Top 3-5):
+1. **[Gap Name]**: [Description, evidence from survey, impact]
+2. **[Gap Name]**: [Description, evidence from survey, impact]
+3. **[Gap Name]**: [Description, evidence from survey, impact]
+
+#### Maturity Progression Roadmap
+
+**Short-term (0-6 months) - Moving to Next Level**:
+1. **[Action]**: [Description, expected outcome, success criteria]
+   - Framework alignment: [DAMA/Gartner/CMMI reference]
+   - Resources needed: [people, tools, budget]
+   - Success metrics: [KPIs]
+
+2. **[Action]**: [Description, expected outcome, success criteria]
+   - Framework alignment: [DAMA/Gartner/CMMI reference]
+   - Resources needed: [people, tools, budget]
+   - Success metrics: [KPIs]
+
+**Medium-term (6-12 months) - Advancing Maturity**:
+1. **[Action]**: [Description, expected outcome, success criteria]
+   - Framework alignment: [DAMA/Gartner/CMMI reference]
+   - Resources needed: [people, tools, budget]
+   - Success metrics: [KPIs]
+
+**Long-term (12-24 months) - Achieving Excellence**:
+1. **[Action]**: [Description, expected outcome, success criteria]
+   - Framework alignment: [DAMA/Gartner/CMMI reference]
+   - Resources needed: [people, tools, budget]
+   - Success metrics: [KPIs]
+
+#### Maturity Success Indicators
+Define measurable indicators for tracking maturity progression:
+
+| Indicator | Current Value | Target (6mo) | Target (12mo) | Target (24mo) |
+|-----------|--------------|--------------|---------------|---------------|
+| Avg Survey Score | [X.X] | [X.X] | [X.X] | [X.X] |
+| % Scores ≥8 | [X%] | [X%] | [X%] | [X%] |
+| Process Automation | [X%] | [X%] | [X%] | [X%] |
+| Policy Compliance | [X%] | [X%] | [X%] | [X%] |
+
+---
+
 ###  Self-Assessment (AI Quality Gate)
 - **Clarity**: [1–10]
 - **Actionability**: [1–10]
