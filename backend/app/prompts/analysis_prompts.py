@@ -12,115 +12,73 @@ def get_deep_dimension_analysis_prompt(
     """Generate prompt for deep dimension analysis"""
     return f"""As a data governance expert, provide a comprehensive analysis of the {dimension} dimension.
 
-## METRICS OVERVIEW
-| Metric | Value |
-|--------|-------|
-| Average Score | {overall_metrics['avg_score']}/10 |
-| Response Rate | {overall_metrics['response_rate']} |
-| Score Range | {overall_metrics['min_score']} - {overall_metrics['max_score']} |
-| Total Responses | {overall_metrics['total_responses']} |
-| Total Respondents | {overall_metrics.get('total_respondents', 'N/A')} |
+METRICS:
+- Average Score: {overall_metrics['avg_score']}/10
+- Response Rate: {overall_metrics['response_rate']}
+- Score Range: {overall_metrics['min_score']} - {overall_metrics['max_score']}
+- Total Responses: {overall_metrics['total_responses']}
 
-## BREAKDOWN DATA
-
-### Category Breakdown:
+CATEGORY BREAKDOWN:
 {category_text}
 
-### Process Breakdown:
+PROCESS BREAKDOWN:
 {process_text}
 
-### Lifecycle Stage Breakdown:
+LIFECYCLE STAGE BREAKDOWN:
 {lifecycle_text}
 
----
+Provide a comprehensive analysis with the following sections. **USE TABLES EXTENSIVELY** for all data, metrics, and comparisons:
 
-## REQUIRED OUTPUT FORMAT
+## Strategic Observations
+Present key insights in a table format:
 
-### 1. Executive Summary (Table Format)
-Create a summary table showing:
-| Aspect | Status | Score | Key Insight |
-|--------|--------|-------|-------------|
-| Overall Maturity | [Critical/Low/Medium/High/Excellent] | {overall_metrics['avg_score']}/10 | [One sentence] |
-| Top Strength | [Category/Process] | [Score] | [Why it's strong] |
-| Top Weakness | [Category/Process] | [Score] | [Why it's weak] |
-| Risk Level | [Low/Medium/High/Critical] | - | [Risk description] |
+| Observation | Impact Level | Evidence | Recommendation |
+|------------|--------------|----------|----------------|
+| [Key finding] | High/Medium/Low | [Score/Data] | [Action] |
 
-### 2. Category Performance Comparison (MUST USE TABLE)
-Create a table comparing all categories:
-| Category | Avg Score | Responses | % High (8-10) | % Low (1-4) | Rank | Trend | Key Issue |
-|----------|-----------|-----------|---------------|-------------|------|-------|-----------|
-| [Category 1] | [X.X] | [N] | [X%] | [X%] | [1-5] | [Up/Down/Stable] | [Brief description] |
-| [Category 2] | [X.X] | [N] | [X%] | [X%] | [1-5] | [Up/Down/Stable] | [Brief description] |
+## Category Analysis
+**MUST include a comparison table:**
 
-**Key Insight:** Provide a one-sentence summary of the most important finding from this comparison.
+| Category | Avg Score | % High (8-10) | % Low (1-4) | Maturity Level | Key Strength | Key Weakness |
+|----------|-----------|---------------|-------------|---------------|--------------|--------------|
+| [Category 1] | X.X | XX% | XX% | High/Medium/Low | [Strength] | [Weakness] |
+| [Category 2] | X.X | XX% | XX% | High/Medium/Low | [Strength] | [Weakness] |
 
-### 3. Process Analysis (MUST USE TABLE)
-Create a table analyzing all processes:
-| Process | Avg Score | Maturity Level | Key Gaps | Priority | Recommended Tools |
-|---------|-----------|----------------|----------|----------|-------------------|
-| [Process 1] | [X.X] | [Low/Medium/High] | [3-5 specific gaps] | [High/Medium/Low] | [Tool names] |
-| [Process 2] | [X.X] | [Low/Medium/High] | [3-5 specific gaps] | [High/Medium/Low] | [Tool names] |
+## Process Analysis
+**MUST include a process comparison table:**
 
-### 4. Lifecycle Stage Analysis (MUST USE TABLE)
-Create a table for lifecycle stages:
-| Lifecycle Stage | Avg Score | Maturity Note | Improvement Priority | Action Items Count |
-|-----------------|-----------|---------------|----------------------|-------------------|
-| [Stage 1] | [X.X] | [Assessment] | [High/Medium/Low] | [N] |
+| Process | Avg Score | Maturity | Key Gaps | Priority | Recommended Tools |
+|---------|-----------|----------|----------|----------|-------------------|
+| [Process 1] | X.X | High/Medium/Low | [Gap description] | High/Medium/Low | [Tool names] |
+| [Process 2] | X.X | High/Medium/Low | [Gap description] | High/Medium/Low | [Tool names] |
 
-### 5. Risk Matrix (MUST USE TABLE)
-Create a risk assessment table:
-| Risk | Severity | Likelihood | Impact | Urgency | Mitigation Strategy |
-|------|----------|------------|--------|---------|-------------------|
-| [Risk 1] | [Critical/High/Medium/Low] | [High/Medium/Low] | [High/Medium/Low] | [Immediate/Short-term/Long-term] | [Strategy] |
+## Lifecycle Analysis
+**MUST include a lifecycle stage table:**
 
-### 6. Prioritized Action Plan (MUST USE TABLE)
-Create a comprehensive action table:
-| Priority | Action Item | Owner Role | Timeline | Expected Impact | Success Metrics | Framework Reference |
-|----------|-------------|------------|----------|-----------------|-----------------|---------------------|
-| 1 (High) | [Specific action] | [Role] | [Timeframe] | [High/Medium/Low] | [Metric] | [DAMA/ISO/GDPR/etc] |
-| 2 (High) | [Specific action] | [Role] | [Timeframe] | [High/Medium/Low] | [Metric] | [Framework] |
+| Lifecycle Stage | Avg Score | Maturity Note | Improvement Priority | Expected Impact |
+|----------------|-----------|---------------|---------------------|------------------|
+| [Stage 1] | X.X | [Assessment] | High/Medium/Low | [Impact description] |
+| [Stage 2] | X.X | [Assessment] | High/Medium/Low | [Impact description] |
 
-**Organize by timeframe:**
-- **Quick Wins (< 3 months):** [List from table]
-- **Medium-term (3-6 months):** [List from table]
-- **Strategic Initiatives (6-12 months):** [List from table]
+## Actionable Recommendations
+**MUST be presented in a detailed table format:**
 
-### 7. Key Insights Summary
-Provide concise, actionable insights based on the data:
-- **Top Performers:** List the 2-3 highest scoring categories/processes with specific scores
-- **Critical Gaps:** List the 2-3 lowest scoring areas that need immediate attention
-- **Patterns:** Identify any notable patterns or correlations (e.g., "Processes in [category] consistently score higher")
-- **Recommendations:** Top 3 priority recommendations based on the analysis
+| Priority | Action Item | Owner Role | Timeline | Expected Outcome | Framework Reference |
+|----------|-------------|------------|----------|------------------|---------------------|
+| High | [Specific action] | [Role] | < 3 months | [Outcome] | [Framework] |
+| Medium | [Specific action] | [Role] | 3-6 months | [Outcome] | [Framework] |
+| Low | [Specific action] | [Role] | 6-12 months | [Outcome] | [Framework] |
 
-### 8. Strategic Observations
-- [3-5 key insights with evidence from the data]
-- Each insight should reference specific scores, categories, or processes
-- Link to frameworks (DAMA-DMBOK, ISO 8000, GDPR, NIST)
-
-### 9. Question-Level Analysis (Table Format)
-| Question ID | Question Text | Category | Process | Avg Score | Min | Max | Responses | Key Comment |
-|-------------|---------------|----------|---------|-----------|-----|-----|------------|-------------|
-| [Q#] | [Text] | [Cat] | [Proc] | [X.X] | [X] | [X] | [N] | [Quote] |
-
----
-
-**CRITICAL:** Use markdown tables extensively. Make the report visually scannable with clear tables, proper formatting, and visual descriptions. Be specific and actionable."""
+**Format your response in markdown with:**
+- Clear headers and section breaks
+- **Extensive use of well-formatted tables** for all data
+- Proper table alignment and spacing
+- Visual separators between major sections
+- Bold text for emphasis in table headers
+- Be specific and actionable."""
 
 
-DEEP_DIMENSION_ANALYSIS_SYSTEM_PROMPT = """You are a senior data governance expert writing a professional strategic report. Write in a formal, report-style format suitable for executive review. Use third-person perspective.
-
-**CRITICAL FORMATTING REQUIREMENTS:**
-1. **Use Markdown tables extensively** - Convert all comparisons, rankings, and data summaries into well-formatted tables
-2. **Data-driven insights** - When describing trends or comparisons, use specific numbers and percentages (e.g., "Category X scores 8.5/10, which is 30% higher than Category Y at 6.5/10")
-3. **Structure for readability** - Use clear hierarchy with headers (##, ###), bullet lists, numbered lists, and blockquotes for key insights
-4. **Code blocks for metrics** - Use code blocks or emphasis for key metrics (scores, percentages, etc.)
-5. **Table format examples:**
-   - Performance comparisons: | Category | Score | Rank | Trend |
-   - Action items: | Priority | Action | Owner | Timeline | Impact |
-   - Risk matrix: | Risk | Severity | Likelihood | Impact |
-6. **Quantitative insights** - Use specific numbers and percentages (e.g., "Score distribution: 60% of responses score 7-10 (high), 25% score 4-6 (medium), 15% score 1-3 (low)")
-
-Provide clear, actionable insights in markdown format with proper headers, bullet points, and extensive tables. Focus on quantitative data and specific recommendations."""
+DEEP_DIMENSION_ANALYSIS_SYSTEM_PROMPT = "You are a senior data governance expert writing a professional strategic report. Write in a formal, report-style format suitable for executive review. Use third-person perspective. **CRITICALLY IMPORTANT: Use well-formatted markdown tables extensively for all data, metrics, comparisons, and action items. Tables must be properly aligned, scannable, and visually appealing for human readers.** Provide clear, actionable insights in markdown format with proper headers, tables, bullet points, and line breaks."
 
 
 def get_facet_analysis_prompt(
@@ -145,28 +103,50 @@ Questions in this {facet_type}:
 Sample Comments:
 {comments_text}
 
-Provide analysis with these sections:
+Provide analysis with these sections. **USE TABLES** for all structured data:
 
 ## Performance Assessment
-- How is this {facet_type} performing relative to a 10-point scale?
-- What does this score indicate about organizational capabilities?
+Present assessment in table format:
+
+| Metric | Current Value | Target Value | Gap | Status |
+|--------|--------------|--------------|-----|--------|
+| Average Score | {facet_data['avg_score']}/10 | 8.0/10 | [Gap] | [Status] |
+| Score Range | {facet_data['min_score']} - {facet_data['max_score']} | 7-10 | [Gap] | [Status] |
+| Response Rate | {facet_data['respondents']} | [Target] | [Gap] | [Status] |
 
 ## Root Cause Analysis
-- Why might this {facet_type} be scoring at this level?
-- What underlying factors could explain the performance?
+Present root causes in table format:
+
+| Root Cause | Impact Level | Evidence | Contributing Factors |
+|-----------|--------------|----------|---------------------|
+| [Cause 1] | High/Medium/Low | [Evidence] | [Factors] |
+| [Cause 2] | High/Medium/Low | [Evidence] | [Factors] |
 
 ## Specific Recommendations
-- What 3-5 concrete actions should be taken to improve this {facet_type}?
-- Prioritize recommendations by impact and feasibility
+**MUST be in table format:**
+
+| Priority | Recommendation | Owner | Timeline | Expected Impact | Effort |
+|----------|---------------|-------|----------|-----------------|--------|
+| High | [Action 1] | [Role] | [Timeline] | [Impact] | Low/Medium/High |
+| Medium | [Action 2] | [Role] | [Timeline] | [Impact] | Low/Medium/High |
+| Low | [Action 3] | [Role] | [Timeline] | [Impact] | Low/Medium/High |
 
 ## Success Metrics
-- What metrics should be tracked to measure improvement?
-- What would "good" look like for this {facet_type} in 6-12 months?
+Present metrics in table format:
 
-Format in markdown with clear headers and bullet points."""
+| Metric | Current | Target (6 months) | Target (12 months) | Measurement Method |
+|--------|---------|-------------------|-------------------|---------------------|
+| [Metric 1] | [Current] | [6M target] | [12M target] | [Method] |
+| [Metric 2] | [Current] | [6M target] | [12M target] | [Method] |
+
+**Format in markdown with:**
+- Clear headers
+- **Well-formatted tables** for all structured information
+- Proper alignment and spacing
+- Visual clarity for human readers"""
 
 
-FACET_ANALYSIS_SYSTEM_PROMPT = "You are a data governance specialist writing a focused analysis report. Write in a professional, report-style format. Use third-person perspective. Provide specific, actionable insights."
+FACET_ANALYSIS_SYSTEM_PROMPT = "You are a data governance specialist writing a focused analysis report. Write in a professional, report-style format. Use third-person perspective. **CRITICALLY IMPORTANT: Present all structured data, metrics, recommendations, and comparisons in well-formatted markdown tables. Tables must be properly aligned and visually clear for human readers.** Provide specific, actionable insights."
 
 
 def get_comment_analysis_prompt(total_comments: int, sample_size: int, comments_text: str) -> str:
@@ -175,35 +155,60 @@ def get_comment_analysis_prompt(total_comments: int, sample_size: int, comments_
 
 {comments_text}
 
-Provide comprehensive comment analysis with these sections:
+Provide comprehensive comment analysis with these sections. **USE TABLES** for all structured data:
 
 ## Sentiment Analysis
-Categorize the comments and provide percentages:
-- Positive comments: X%
-- Neutral comments: Y%
-- Negative comments: Z%
+Present sentiment breakdown in table format:
 
-Explain the overall sentiment trend.
+| Sentiment Category | Count | Percentage | Sample Comments |
+|-------------------|-------|------------|-----------------|
+| Positive | [Count] | X% | "[Sample comment 1]" |
+| Neutral | [Count] | Y% | "[Sample comment 2]" |
+| Negative | [Count] | Z% | "[Sample comment 3]" |
+
+**Overall Sentiment Trend:** [Brief explanation]
 
 ## Key Themes
-List the 5-7 most common themes across all comments. For each theme:
-- Theme name
-- Brief description
-- Approximate frequency
+Present themes in table format:
+
+| Theme | Frequency | Description | Sample Comments | Priority |
+|-------|-----------|-------------|-----------------|----------|
+| [Theme 1] | [Count/%] | [Description] | "[Sample]" | High/Medium/Low |
+| [Theme 2] | [Count/%] | [Description] | "[Sample]" | High/Medium/Low |
+| [Theme 3] | [Count/%] | [Description] | "[Sample]" | High/Medium/Low |
 
 ## Top Concerns
-What are respondents most worried about or frustrated with?
-List 3-5 main concerns in order of frequency/severity.
+Present concerns in table format:
+
+| Concern | Severity | Frequency | Sample Quote | Recommended Action |
+|---------|----------|-----------|--------------|-------------------|
+| [Concern 1] | High/Medium/Low | [Count] | "[Quote]" | [Action] |
+| [Concern 2] | High/Medium/Low | [Count] | "[Quote]" | [Action] |
+| [Concern 3] | High/Medium/Low | [Count] | "[Quote]" | [Action] |
 
 ## Positive Highlights
-What are respondents happy about or praising?
-List 3-5 positive aspects mentioned.
+Present positive aspects in table format:
+
+| Positive Aspect | Frequency | Sample Quote | Best Practice |
+|----------------|-----------|--------------|---------------|
+| [Aspect 1] | [Count] | "[Quote]" | [Practice] |
+| [Aspect 2] | [Count] | "[Quote]" | [Practice] |
+| [Aspect 3] | [Count] | "[Quote]" | [Practice] |
 
 ## Recommendations Based on Comments
-What actions should be taken based on the feedback in these comments?
-Provide 3-5 specific recommendations.
+Present recommendations in table format:
 
-Format in markdown with clear headers and bullet points."""
+| Priority | Recommendation | Based On | Owner | Timeline | Expected Outcome |
+|----------|---------------|----------|-------|----------|------------------|
+| High | [Recommendation 1] | [Comment theme] | [Role] | [Timeline] | [Outcome] |
+| Medium | [Recommendation 2] | [Comment theme] | [Role] | [Timeline] | [Outcome] |
+| Low | [Recommendation 3] | [Comment theme] | [Role] | [Timeline] | [Outcome] |
+
+**Format in markdown with:**
+- Clear headers
+- **Well-formatted tables** for all data
+- Proper alignment and visual clarity
+- Easy-to-scan structure for human readers"""
 
 
-COMMENT_ANALYSIS_SYSTEM_PROMPT = "You are a data analyst specializing in qualitative feedback analysis. Write a professional report suitable for management review. Use third-person perspective. Provide objective analysis with specific insights."
+COMMENT_ANALYSIS_SYSTEM_PROMPT = "You are a data analyst specializing in qualitative feedback analysis. Write a professional report suitable for management review. Use third-person perspective. **CRITICALLY IMPORTANT: Present all sentiment data, themes, concerns, and recommendations in well-formatted markdown tables. Tables must be properly aligned and easy to scan for human readers.** Provide objective analysis with specific insights."

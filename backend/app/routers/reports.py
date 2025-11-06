@@ -427,14 +427,19 @@ async def get_dimension_report(
             logger.error(f"Exception generating dimension LLM analysis for {dimension}: {str(e)}\n{traceback.format_exc()}")
 
     # Generate facet-level LLM analyses
-    # Skip these for now to speed up response - they can be added later if needed
     category_llm_analyses = {}
     process_llm_analyses = {}
     lifecycle_llm_analyses = {}
 
-    # Note: Facet-level analyses are disabled to speed up response time
-    # They can be re-enabled later if needed, but they significantly slow down the report generation
-    if False and llm_config and llm_config.status == "Success":
+    # Facet-level analyses provide detailed insights by category, process, and lifecycle stage
+    # These analyses enhance report quality by providing granular insights
+    if llm_config and llm_config.status == "Success":
+        is_thinking_mode = getattr(llm_config, 'aws_thinking_mode', None) == 'enabled'
+        # Increase timeout for thinking mode, use reasonable timeout for standard mode
+        facet_timeout = 600.0 if is_thinking_mode else 300.0  # 10 min for thinking, 5 min for standard
+        
+        logger.info(f"Generating facet-level analyses for dimension {dimension} (timeout={facet_timeout}s, thinking_mode={is_thinking_mode})")
+        
         # Category analyses
         for category_name, category_data in category_analysis.items():
             try:
@@ -445,12 +450,17 @@ async def get_dimension_report(
                         category_name,
                         category_data
                     ),
-                    timeout=300.0  # 5 minute timeout per facet
+                    timeout=facet_timeout
                 )
                 if llm_response.get("success"):
                     category_llm_analyses[category_name] = llm_response.get("content")
-            except (asyncio.TimeoutError, Exception):
-                pass  # Silently skip if analysis fails or times out
+                    logger.info(f"✓ Category analysis completed for {category_name}")
+                else:
+                    logger.warning(f"Category analysis failed for {category_name}: {llm_response.get('error', 'Unknown error')}")
+            except asyncio.TimeoutError:
+                logger.warning(f"Category analysis timed out for {category_name} after {facet_timeout}s")
+            except Exception as e:
+                logger.error(f"Category analysis error for {category_name}: {str(e)}")
 
         # Process analyses
         for process_name, process_data in process_analysis.items():
@@ -462,12 +472,17 @@ async def get_dimension_report(
                         process_name,
                         process_data
                     ),
-                    timeout=300.0  # 5 minute timeout per facet
+                    timeout=facet_timeout
                 )
                 if llm_response.get("success"):
                     process_llm_analyses[process_name] = llm_response.get("content")
-            except (asyncio.TimeoutError, Exception):
-                pass  # Silently skip if analysis fails or times out
+                    logger.info(f"✓ Process analysis completed for {process_name}")
+                else:
+                    logger.warning(f"Process analysis failed for {process_name}: {llm_response.get('error', 'Unknown error')}")
+            except asyncio.TimeoutError:
+                logger.warning(f"Process analysis timed out for {process_name} after {facet_timeout}s")
+            except Exception as e:
+                logger.error(f"Process analysis error for {process_name}: {str(e)}")
 
         # Lifecycle analyses
         for lifecycle_name, lifecycle_data in lifecycle_analysis.items():
@@ -479,12 +494,19 @@ async def get_dimension_report(
                         lifecycle_name,
                         lifecycle_data
                     ),
-                    timeout=300.0  # 5 minute timeout per facet
+                    timeout=facet_timeout
                 )
                 if llm_response.get("success"):
                     lifecycle_llm_analyses[lifecycle_name] = llm_response.get("content")
-            except (asyncio.TimeoutError, Exception):
-                pass  # Silently skip if analysis fails or times out
+                    logger.info(f"✓ Lifecycle analysis completed for {lifecycle_name}")
+                else:
+                    logger.warning(f"Lifecycle analysis failed for {lifecycle_name}: {llm_response.get('error', 'Unknown error')}")
+            except asyncio.TimeoutError:
+                logger.warning(f"Lifecycle analysis timed out for {lifecycle_name} after {facet_timeout}s")
+            except Exception as e:
+                logger.error(f"Lifecycle analysis error for {lifecycle_name}: {str(e)}")
+        
+        logger.info(f"Facet analysis summary: {len(category_llm_analyses)} categories, {len(process_llm_analyses)} processes, {len(lifecycle_llm_analyses)} lifecycle stages")
 
     # Generate comment sentiment analysis with LLM
     comment_llm_analysis = None
