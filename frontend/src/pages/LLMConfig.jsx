@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { llmAPI } from '../api';
+import { SECRETS } from '../config/secrets';
 
 const LLM_PURPOSES = [
   'Default',
@@ -195,9 +196,9 @@ export default function LLMConfig() {
           [purpose]: {
             ...prev[purpose],
             azure_deployment_name: model.name,
-            azure_endpoint: model.endpoint,
-            azure_api_key: model.apiKey,
-            azure_api_version: model.apiVersion,
+            azure_endpoint: model.endpoint || SECRETS.azure.endpoint,
+            azure_api_key: model.apiKey || SECRETS.azure.apiKey,
+            azure_api_version: model.apiVersion || SECRETS.azure.apiVersion,
             azure_reasoning_effort: model.defaultReasoningEffort || null
           }
         }));
@@ -210,9 +211,9 @@ export default function LLMConfig() {
           [purpose]: {
             ...prev[purpose],
             aws_model_id: model.name,
-            aws_region: model.region,
-            aws_access_key_id: model.accessKeyId,
-            aws_secret_access_key: model.secretAccessKey,
+            aws_region: model.region || SECRETS.aws.region,
+            aws_access_key_id: model.accessKeyId || SECRETS.aws.accessKeyId,
+            aws_secret_access_key: model.secretAccessKey || SECRETS.aws.secretAccessKey,
             aws_thinking_mode: model.defaultThinkingMode || null
           }
         }));

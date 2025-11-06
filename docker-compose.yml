@@ -63,11 +63,24 @@ services:
       - backend
     volumes:
       - ./frontend:/app
+      - ./backend:/backend
+      - ./secrets.json:/secrets.json:ro
       - /app/node_modules
     networks:
       - entrust_network
     stdin_open: true
     tty: true
+    command: >
+      sh -c "
+        echo 'Loading secrets and generating frontend config...' &&
+        if command -v python3 &> /dev/null; then
+          python3 /backend/load_secrets.py || echo 'Warning: Failed to load secrets, continuing without them...'
+        else
+          echo 'Python3 not found, skipping secrets loading. Install Python3 or run: python backend/load_secrets.py manually'
+        fi &&
+        echo 'Starting frontend development server...' &&
+        npm run dev
+      "
 
 volumes:
   postgres_data:
