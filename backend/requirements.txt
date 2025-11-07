@@ -13,3 +13,9 @@ reportlab==4.0.7
 markdown==3.5.1
 boto3==1.34.0
 openai==1.6.0
+
+# RAG Dependencies
+chromadb==0.4.22
+sentence-transformers==2.3.1
+torch>=2.0.0
+numpy<2.0.0
