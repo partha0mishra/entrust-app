@@ -150,11 +150,25 @@ def create_markdown_report(
     if category_analysis and len(category_analysis) > 0:
         markdown += """## Category Analysis
 
-| Category | Avg Score | Min Score | Max Score | Response Count |
-|----------|-----------|-----------|-----------|----------------|
+| Category | Avg Score | % High (8-10) | % Medium (5-7) | % Low (1-4) | Response Count |
+|----------|-----------|---------------|----------------|-------------|----------------|
 """
         for cat_name, cat_data in category_analysis.items():
-            markdown += f"| {cat_name} | {cat_data.get('avg_score', 'N/A')} | {cat_data.get('min_score', 'N/A')} | {cat_data.get('max_score', 'N/A')} | {cat_data.get('count', 0)} |\n"
+            avg_score = cat_data.get('avg_score', 'N/A')
+            avg_score_str = f"{avg_score:.2f}" if isinstance(avg_score, (int, float)) and avg_score is not None else 'N/A'
+
+            score_dist = cat_data.get('score_distribution', {})
+            pct_high = score_dist.get('pct_high', 0)
+            pct_medium = score_dist.get('pct_medium', 0)
+            pct_low = score_dist.get('pct_low', 0)
+
+            pct_high_str = f"{pct_high}%" if pct_high > 0 else "0%"
+            pct_medium_str = f"{pct_medium}%" if pct_medium > 0 else "0%"
+            pct_low_str = f"{pct_low}%" if pct_low > 0 else "0%"
+
+            count = cat_data.get('count', 0)
+
+            markdown += f"| {cat_name} | {avg_score_str} | {pct_high_str} | {pct_medium_str} | {pct_low_str} | {count} |\n"
 
         markdown += "\n---\n\n"
 
@@ -162,11 +176,25 @@ def create_markdown_report(
     if process_analysis and len(process_analysis) > 0:
         markdown += """## Process Analysis
 
-| Process | Avg Score | Min Score | Max Score | Response Count |
-|---------|-----------|-----------|-----------|----------------|
+| Process | Avg Score | % High (8-10) | % Medium (5-7) | % Low (1-4) | Response Count |
+|---------|-----------|---------------|----------------|-------------|----------------|
 """
         for proc_name, proc_data in process_analysis.items():
-            markdown += f"| {proc_name} | {proc_data.get('avg_score', 'N/A')} | {proc_data.get('min_score', 'N/A')} | {proc_data.get('max_score', 'N/A')} | {proc_data.get('count', 0)} |\n"
+            avg_score = proc_data.get('avg_score', 'N/A')
+            avg_score_str = f"{avg_score:.2f}" if isinstance(avg_score, (int, float)) and avg_score is not None else 'N/A'
+
+            score_dist = proc_data.get('score_distribution', {})
+            pct_high = score_dist.get('pct_high', 0)
+            pct_medium = score_dist.get('pct_medium', 0)
+            pct_low = score_dist.get('pct_low', 0)
+
+            pct_high_str = f"{pct_high}%" if pct_high > 0 else "0%"
+            pct_medium_str = f"{pct_medium}%" if pct_medium > 0 else "0%"
+            pct_low_str = f"{pct_low}%" if pct_low > 0 else "0%"
+
+            count = proc_data.get('count', 0)
+
+            markdown += f"| {proc_name} | {avg_score_str} | {pct_high_str} | {pct_medium_str} | {pct_low_str} | {count} |\n"
 
         markdown += "\n---\n\n"
 
@@ -174,11 +202,25 @@ def create_markdown_report(
     if lifecycle_analysis and len(lifecycle_analysis) > 0:
         markdown += """## Lifecycle Stage Analysis
 
-| Lifecycle Stage | Avg Score | Min Score | Max Score | Response Count |
-|----------------|-----------|-----------|-----------|----------------|
+| Lifecycle Stage | Avg Score | % High (8-10) | % Medium (5-7) | % Low (1-4) | Response Count |
+|----------------|-----------|---------------|----------------|-------------|----------------|
 """
         for lc_name, lc_data in lifecycle_analysis.items():
-            markdown += f"| {lc_name} | {lc_data.get('avg_score', 'N/A')} | {lc_data.get('min_score', 'N/A')} | {lc_data.get('max_score', 'N/A')} | {lc_data.get('count', 0)} |\n"
+            avg_score = lc_data.get('avg_score', 'N/A')
+            avg_score_str = f"{avg_score:.2f}" if isinstance(avg_score, (int, float)) and avg_score is not None else 'N/A'
+
+            score_dist = lc_data.get('score_distribution', {})
+            pct_high = score_dist.get('pct_high', 0)
+            pct_medium = score_dist.get('pct_medium', 0)
+            pct_low = score_dist.get('pct_low', 0)
+
+            pct_high_str = f"{pct_high}%" if pct_high > 0 else "0%"
+            pct_medium_str = f"{pct_medium}%" if pct_medium > 0 else "0%"
+            pct_low_str = f"{pct_low}%" if pct_low > 0 else "0%"
+
+            count = lc_data.get('count', 0)
+
+            markdown += f"| {lc_name} | {avg_score_str} | {pct_high_str} | {pct_medium_str} | {pct_low_str} | {count} |\n"
 
         markdown += "\n---\n\n"
 

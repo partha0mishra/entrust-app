@@ -54,6 +54,16 @@ def aggregate_by_facet(
         respondent_count = len(set(r.user_id for r in facet_responses))
 
         if numeric_scores:
+            # Calculate score distribution
+            high_scores = [s for s in numeric_scores if s >= 8.0]
+            medium_scores = [s for s in numeric_scores if 5.0 <= s < 8.0]
+            low_scores = [s for s in numeric_scores if s < 5.0]
+
+            total_scores = len(numeric_scores)
+            pct_high = round((len(high_scores) / total_scores * 100), 1) if total_scores > 0 else 0
+            pct_medium = round((len(medium_scores) / total_scores * 100), 1) if total_scores > 0 else 0
+            pct_low = round((len(low_scores) / total_scores * 100), 1) if total_scores > 0 else 0
+
             facet_data[facet_value] = {
                 'name': facet_value,
                 'avg_score': round(sum(numeric_scores) / len(numeric_scores), 2),
@@ -62,6 +72,15 @@ def aggregate_by_facet(
                 'count': len(numeric_scores),
                 'respondents': respondent_count,
                 'comments': comments,
+                # Score distribution
+                'score_distribution': {
+                    'high_count': len(high_scores),
+                    'medium_count': len(medium_scores),
+                    'low_count': len(low_scores),
+                    'pct_high': pct_high,
+                    'pct_medium': pct_medium,
+                    'pct_low': pct_low
+                },
                 'questions': [
                     {
                         'text': q.text,
@@ -79,6 +98,15 @@ def aggregate_by_facet(
                 'count': 0,
                 'respondents': 0,
                 'comments': [],
+                # Score distribution
+                'score_distribution': {
+                    'high_count': 0,
+                    'medium_count': 0,
+                    'low_count': 0,
+                    'pct_high': 0,
+                    'pct_medium': 0,
+                    'pct_low': 0
+                },
                 'questions': [
                     {
                         'text': q.text,
