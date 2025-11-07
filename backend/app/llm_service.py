@@ -5,6 +5,7 @@ from .llm_providers import get_llm_provider
 import re
 from .prompts import (
     PROMPT_ADD_ON,
+    OVERALL_SUMMARY_PROMPT_ADD_ON,
     DEFAULT_SYSTEM_PROMPT,
     DEFAULT_USER_PROMPT_TEMPLATE,
     DIMENSION_PROMPTS,
@@ -75,9 +76,29 @@ class LLMService:
     async def _call_llm(
         provider,
         messages: List[Dict],
-        max_tokens: int = 20000
+        max_tokens: Optional[int] = None
     ) -> str:
-        """Helper method to call LLM API using provider"""
+        """Helper method to call LLM API using provider
+        
+        If max_tokens is not provided, automatically determines based on provider:
+        - For GPT-5 (Azure OpenAI): 30000 (configured limit)
+        - For AWS Bedrock with thinking mode: 15000 (to accommodate budget_tokens)
+        - For AWS Bedrock without thinking mode: 8000 (faster responses)
+        - For Azure OpenAI (other models): 8000 (standard)
+        - For others: 8000 (default)
+        """
+        if max_tokens is None:
+            # Auto-detect appropriate max_tokens based on provider
+            # Check if this is GPT-5 model
+            is_gpt5 = hasattr(provider, 'deployment_name') and provider.deployment_name and provider.deployment_name.startswith('gpt-5')
+            
+            if is_gpt5:
+                max_tokens = 30000  # GPT-5 configured to 30k output tokens
+            elif hasattr(provider, 'thinking_mode') and provider.thinking_mode == "enabled":
+                max_tokens = 15000  # For thinking mode, need at least 1.5x budget_tokens
+            else:
+                max_tokens = 8000  # For non-thinking mode, use reasonable default
+        
         return await provider.call_llm(messages, max_tokens)
     
     @staticmethod
@@ -160,7 +181,7 @@ Questions and Responses:
                 ]
 
                 chunk_summary = await LLMService._call_llm(
-                    provider, messages, max_tokens=20000
+                    provider, messages  # Auto-determines max_tokens based on thinking mode
                 )
 
                 chunk_summaries.append({
@@ -191,7 +212,7 @@ Questions and Responses:
                 ]
 
                 final_summary = await LLMService._call_llm(
-                    provider, messages, max_tokens=20000
+                    provider, messages  # Auto-determines max_tokens based on thinking mode
                 )
             
             single_chunk_summary = chunk_summaries[0] if chunk_summaries else {}
@@ -267,7 +288,7 @@ Questions and Responses:
                 {"role": "user", "content": prompt}
             ]
 
-            content = await LLMService._call_llm(provider, messages, max_tokens=20000)
+            content = await LLMService._call_llm(provider, messages)  # Auto-determines max_tokens based on thinking mode
 
             return {
                 "success": True,
@@ -321,7 +342,7 @@ Questions and Responses:
                 {"role": "user", "content": prompt}
             ]
 
-            content = await LLMService._call_llm(provider, messages, max_tokens=20000)
+            content = await LLMService._call_llm(provider, messages)  # Auto-determines max_tokens based on thinking mode
 
             return {
                 "success": True,
@@ -366,7 +387,7 @@ Questions and Responses:
                 {"role": "user", "content": prompt}
             ]
 
-            content = await LLMService._call_llm(provider, messages, max_tokens=20000)
+            content = await LLMService._call_llm(provider, messages)  # Auto-determines max_tokens based on thinking mode
 
             return {
                 "success": True,
@@ -419,17 +440,19 @@ Questions and Responses:
                 if current_chunk:
                     chunks.append(current_chunk)
                 
-                # Process each chunk
+                # Process each chunk using proper prompt function
                 chunk_summaries = []
                 for i, chunk in enumerate(chunks):
-                    chunk_prompt = f"Analyze these data governance dimensions (Part {i+1} of {len(chunks)}):\n\n"
+                    # Build chunk data text
+                    chunk_data = ""
                     for dimension, summary in chunk.items():
-                        chunk_prompt += f"## {dimension}\n{summary}\n\n"
+                        chunk_data += f"## {dimension}\n{summary}\n\n"
                     
-                    chunk_prompt += f"\n\nProvide a consolidated assessment focusing on cross-cutting themes and strategic insights from these dimensions."
+                    # Use proper prompt function
+                    chunk_prompt = get_overall_summary_chunked_prompt(i, len(chunks), chunk_data)
                     
                     messages = [
-                        {"role": "system", "content": "You are a senior data governance consultant writing a professional executive report. Write in a formal, report-style format suitable for C-level executives. Use third-person perspective. Do NOT use first person (I, we) or ask questions. Do NOT include interactive elements or conversational language. Use markdown formatting."},
+                        {"role": "system", "content": CONSOLIDATION_SYSTEM_PROMPT},
                         {"role": "user", "content": chunk_prompt}
                     ]
 
@@ -438,59 +461,16 @@ Questions and Responses:
                     )
                     chunk_summaries.append(chunk_summary)
                 
-                # Final consolidation
-                final_prompt = "You have analyzed multiple groups of data governance dimensions. Here are the analyses:\n\n"
-                for i, summary in enumerate(chunk_summaries):
-                    final_prompt += f"\n--- Analysis Part {i+1} ---\n{summary}\n"
-                
-                prompt_add_on = """## PROMPT ADD-ON
-You are a senior data governance consultant.
-**Step 1**: Compute stats (avg, % high/low) by Category, Process, Lifecycle Stage.
-**Step 2**: Draft tables.
-**Step 3**: Write observations with evidence.
-**Step 4**: Prioritize actions (Risk × Impact).
-**Step 5**: Self-score (1–10). Revise if <8.
-**Output ONLY the Markdown report**.
-
----
-"""
-                final_prompt += """
-
-Generate a professionally crafted, consultative, executive-ready report with the following sections:
-
-### 1. Executive Summary
-- High-level overview across all dimensions
-- Overall maturity score (aggregated average)
-- Top 3 cross-cutting themes
-
-### 2. Cross-Dimension Comparison
-- Create a table with columns: **Dimension**, Avg Score, Maturity Level, Key Strength/Weakness
-- Visualize overall performance (e.g., describe a radar chart)
-
-### 3. Interconnected Insights
-- Highlight linkages (e.g., governance weaknesses affecting quality)
-- Common patterns by Category/Process/Lifecycle across dimensions
-
-### 4. Consolidated Action Plan
-- Create a table with columns: Priority, Action Item, Affected Dimensions, Owner, Timeline, Expected Impact
-- Provide at least one 'High' priority action.
-
-### 5. Enterprise-Wide Risks
-- Top 5 risks with severity ratings
-- Mitigation strategies
-
-### 6. Roadmap for Maturity Improvement
-- Phased recommendations (Short/Mid/Long-term)
-- Metrics for tracking progress (e.g., KPI dashboards)
-"""
+                # Final consolidation using proper prompt function
+                final_prompt = get_overall_summary_consolidation_prompt(chunk_summaries)
                 
                 messages = [
-                    {"role": "system", "content": prompt_add_on + "You are a **senior data management consultant** tasked with synthesizing insights across multiple data management dimensions. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. The analysis is based on survey responses with scores on a 1-10 scale."},
+                    {"role": "system", "content": OVERALL_SUMMARY_SYSTEM_PROMPT},
                     {"role": "user", "content": final_prompt}
                 ]
 
                 final_summary = await LLMService._call_llm(
-                    provider, messages, max_tokens=20000
+                    provider, messages  # Auto-determines max_tokens based on thinking mode
                 )
 
                 return {
@@ -501,46 +481,16 @@ Generate a professionally crafted, consultative, executive-ready report with the
                 }
 
             else:
-                # Single call for smaller content
-                prompt = "Analyze the following dimension summaries and provide an overall organizational data governance assessment:\n\n"
-                prompt += all_summaries_text
-                prompt_add_on = """## PROMPT ADD-ON
-You are a senior data governance consultant.
-**Step 1**: Compute stats (avg, % high/low) by Category, Process, Lifecycle Stage.
-**Step 2**: Draft tables.
-**Step 3**: Write observations with evidence.
-**Step 4**: Prioritize actions (Risk × Impact).
-**Step 5**: Self-score (1–10). Revise if <8.
-**Output ONLY the Markdown report** .
-
----
-"""
-                prompt += """
-
-Generate a professionally crafted, consultative, executive-ready report with the following sections:
-
-### 1. Executive Summary
-- High-level overview across all dimensions
-- Overall maturity score (aggregated average)
-- Top 3 cross-cutting themes
-
-### 2. Cross-Dimension Comparison
-- Create a table with columns: **Dimension**, Avg Score, Maturity Level, Key Strength/Weakness
-- Visualize overall performance (e.g., describe a radar chart)
-
-### 3. Interconnected Insights
-- Highlight linkages (e.g., governance weaknesses affecting quality)
-- Common patterns by Category/Process/Lifecycle across dimensions
-
-Use markdown formatting with clear headers and bullet points."""
+                # Single call for smaller content using proper prompt function
+                prompt = get_overall_summary_single_prompt(all_summaries_text)
 
                 messages = [
-                    {"role": "system", "content": prompt_add_on + "You are a **senior data management consultant** tasked with synthesizing insights across multiple data management dimensions. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. The analysis is based on survey responses with scores on a 1-10 scale."},
+                    {"role": "system", "content": OVERALL_SUMMARY_SYSTEM_PROMPT},
                     {"role": "user", "content": prompt}
                 ]
 
                 summary = await LLMService._call_llm(
-                    provider, messages, max_tokens=20000
+                    provider, messages  # Auto-determines max_tokens based on thinking mode
                 )
 
                 return {

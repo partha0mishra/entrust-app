@@ -7,17 +7,24 @@ PROMPT_ADD_ON = """## PROMPT ADD-ON
 You are a senior data governance consultant.
 **DEEP DRILL-DOWN REQUIRED**:
 **Step 1**: Compute stats (avg, % high/low) by Category, Process, Lifecycle Stage.
-**Step 2**: Draft tables.
+**Step 2**: Draft visually appealing, well-formatted tables with proper alignment.
 **Step 3**: Write observations with evidence.
 **Step 4**: Prioritize actions (Risk × Impact).
 **Step 5**:
 - For **every Category, Process, and Lifecycle Stage**, provide:
-  - Full score breakdown
-  - All comments (with sentiment/theme)
-  - 3–6 **best practices** (cite DAMA, GDPR, ISO 8000, NIST)
+  - Full score breakdown in table format
+  - All comments (with sentiment/theme) in organized tables
+  - 3–6 **best practices** (cite DAMA, GDPR, ISO 8000, NIST) in table format
   - 3–6 **observations**
   - 3–6 **areas for improvement**
-  - 3–8 **action items** (priority, owner, tool, timeline, framework)
+  - 3–8 **action items** in detailed tables (priority, owner, tool, timeline, framework)
+- **CRITICAL: Use tables extensively for all data, metrics, comparisons, and action items**
+- **Table formatting requirements**:
+  - Use proper markdown table syntax with aligned columns
+  - Include clear headers with bold text
+  - Ensure tables are readable and scannable
+  - Use consistent formatting across all tables
+  - Add visual separators between sections
 - **Do not summarize** — be exhaustive.
 - **Cite Q# everywhere**.
 - **Self-score depth ≥ 9** or revise.

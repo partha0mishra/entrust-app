@@ -17,6 +17,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
+# Ensure questions.json is copied (explicit copy for clarity)
+# If questions.json exists in backend directory, it will be copied by COPY . .
+# If it's in parent directory, copy it explicitly
+COPY questions.json /app/questions.json
+
 # Expose port
 EXPOSE 8000
 

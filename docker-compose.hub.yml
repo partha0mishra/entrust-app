@@ -19,7 +19,7 @@ services:
       retries: 5
 
   backend:
-    build: ./backend
+    image: kshitij001/entrust-backend:latest
     container_name: entrust_backend
     ports:
       - "8000:8000"
@@ -33,10 +33,13 @@ services:
       postgres:
         condition: service_healthy
     volumes:
+      # Optional: Mount local backend for development (works on Windows, Mac, Linux)
       - ./backend:/app
-      - ./questions.json:/app/questions.json
+      # Optional: Mount questions.json if available locally
+      - ./questions.json:/app/questions.json:ro
     networks:
       - entrust_network
+    # Platform-independent host gateway (works on Windows, Mac, Linux with Docker Desktop)
     extra_hosts:
       - host.docker.internal:host-gateway
     command: >
@@ -48,12 +51,14 @@ services:
         done &&
         echo 'PostgreSQL is ready! Deploying database...' &&
         python deploy_db.py &&
+        echo 'Loading Tesla test data...' &&
+        python fill_tesla_data.py || echo 'Tesla data already exists or error occurred, continuing...' &&
         echo 'Starting FastAPI server...' &&
         uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
       "
 
   frontend:
-    build: ./frontend
+    image: kshitij001/entrust-frontend:latest
     container_name: entrust_frontend
     ports:
       - "3000:3000"
@@ -62,9 +67,13 @@ services:
     depends_on:
       - backend
     volumes:
+      # Optional: Mount local frontend for development (works on Windows, Mac, Linux)
       - ./frontend:/app
-      - ./backend:/backend
+      # Optional: Mount backend for secrets loading
+      - ./backend:/backend:ro
+      # Optional: Mount secrets.json if available (read-only)
       - ./secrets.json:/secrets.json:ro
+      # Anonymous volume for node_modules (platform-independent)
       - /app/node_modules
     networks:
       - entrust_network
@@ -73,10 +82,14 @@ services:
     command: >
       sh -c "
         echo 'Loading secrets and generating frontend config...' &&
-        if command -v python3 &> /dev/null; then
-          python3 /backend/load_secrets.py || echo 'Warning: Failed to load secrets, continuing without them...'
+        if [ -f /backend/load_secrets.py ]; then
+          if command -v python3 &> /dev/null; then
+            python3 /backend/load_secrets.py || echo 'Warning: Failed to load secrets, continuing without them...'
+          else
+            echo 'Python3 not found, skipping secrets loading.'
+          fi
         else
-          echo 'Python3 not found, skipping secrets loading. Install Python3 or run: python backend/load_secrets.py manually'
+          echo 'Secrets file not found, continuing without secrets...'
         fi &&
         echo 'Starting frontend development server...' &&
         npm run dev
@@ -88,3 +101,4 @@ volumes:
 networks:
   entrust_network:
     driver: bridge
+

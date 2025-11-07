@@ -68,12 +68,14 @@ class LLMConfigBase(BaseModel):
     aws_access_key_id: Optional[str] = None
     aws_secret_access_key: Optional[str] = None
     aws_model_id: Optional[str] = None
+    aws_thinking_mode: Optional[str] = None  # For Claude Sonnet: enabled, disabled
 
     # Azure OpenAI fields
     azure_endpoint: Optional[str] = None
     azure_api_key: Optional[str] = None
     azure_deployment_name: Optional[str] = None
     azure_api_version: Optional[str] = "2024-02-15-preview"
+    azure_reasoning_effort: Optional[str] = None  # For GPT-5: minimal, low, medium, high
 
 class LLMConfigCreate(LLMConfigBase):
     pass

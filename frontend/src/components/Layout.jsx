@@ -21,7 +21,7 @@ export default function Layout() {
 
   const isAdmin = user?.user_type === 'SystemAdmin';
   const isCustomerUser = user?.user_type === 'CXO' || user?.user_type === 'Participant';
-  const canViewReports = user?.user_type === 'CXO' || user?.user_type === 'Sales';
+  const canViewReports = user?.user_type === 'CXO' || user?.user_type === 'Sales' || user?.user_type === 'SystemAdmin';
 
   return (
     <div className="min-h-screen bg-gray-50 font-schibsted">

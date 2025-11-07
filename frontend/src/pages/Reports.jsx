@@ -21,6 +21,7 @@ export default function Reports() {
   const [customers, setCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [isSalesUser, setIsSalesUser] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
   const [showJson, setShowJson] = useState(false);
 
   useEffect(() => {
@@ -34,9 +35,11 @@ export default function Reports() {
       console.log('User type:', parsedUser.user_type);
       
       const salesUser = parsedUser.user_type === 'Sales' || parsedUser.user_type === 'SALES';
+      const adminUser = parsedUser.user_type === 'SystemAdmin';
       setIsSalesUser(salesUser);
+      setIsAdminUser(adminUser);
       
-      if (salesUser) {
+      if (salesUser || adminUser) {
         loadCustomers(parsedUser);
       } else {
         loadDimensions(parsedUser, parsedUser.customer_id);
@@ -112,10 +115,10 @@ export default function Reports() {
     setReport(null);
 
     try {
-      const customerId = isSalesUser ? (selectedCustomer?.id || user.customer_id) : user.customer_id;
+      const customerId = (isSalesUser || isAdminUser) ? (selectedCustomer?.id || user.customer_id) : user.customer_id;
 
       // Ensure customer code is set
-      if (isSalesUser && selectedCustomer) {
+      if ((isSalesUser || isAdminUser) && selectedCustomer) {
         setCustomerCode(selectedCustomer.customer_code);
       } else if (user.customer_code) {
         setCustomerCode(user.customer_code);
@@ -138,10 +141,10 @@ export default function Reports() {
     setReport(null);
 
     try {
-      const customerId = isSalesUser ? (selectedCustomer?.id || user.customer_id) : user.customer_id;
+      const customerId = (isSalesUser || isAdminUser) ? (selectedCustomer?.id || user.customer_id) : user.customer_id;
 
       // Ensure customer code is set
-      if (isSalesUser && selectedCustomer) {
+      if ((isSalesUser || isAdminUser) && selectedCustomer) {
         setCustomerCode(selectedCustomer.customer_code);
       } else if (user.customer_code) {
         setCustomerCode(user.customer_code);
@@ -240,22 +243,41 @@ export default function Reports() {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Reports</h1>
-        {isSalesUser && customers.length > 0 && (
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium text-gray-700">Customer:</label>
-            <select
-              value={selectedCustomer?.id || ''}
-              onChange={handleCustomerChange}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-encora-green focus:border-transparent"
+        <div className="flex items-center space-x-4">
+          {(isSalesUser || isAdminUser) && customers.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Customer:</label>
+              <select
+                value={selectedCustomer?.id || ''}
+                onChange={handleCustomerChange}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-encora-green focus:border-transparent"
+              >
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.name} ({customer.customer_code}){!customer.has_survey ? ' - No Survey' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {report && !loading && (
+            <button
+              onClick={() => {
+                if (selectedDimension === 'Overall') {
+                  loadOverallReport();
+                } else {
+                  loadDimensionReport(selectedDimension);
+                }
+              }}
+              className="px-4 py-2 bg-encora-green text-white rounded-lg hover:bg-green-600 transition font-semibold shadow-md flex items-center space-x-2"
             >
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.name} ({customer.customer_code}){!customer.has_survey ? ' - No Survey' : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Re-generate Report</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -299,7 +321,24 @@ export default function Reports() {
 
       {report && !loading && (
         <div className="bg-white rounded-lg shadow p-8" ref={reportRef}>
-          <h2 className="text-2xl font-bold mb-6">{selectedDimension} Report</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">{selectedDimension} Report</h2>
+            <button
+              onClick={() => {
+                if (selectedDimension === 'Overall') {
+                  loadOverallReport();
+                } else {
+                  loadDimensionReport(selectedDimension);
+                }
+              }}
+              className="px-4 py-2 bg-encora-green text-white rounded-lg hover:bg-green-600 transition font-semibold shadow-md flex items-center space-x-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Re-generate Report</span>
+            </button>
+          </div>
 
           {selectedDimension === 'Overall' ? (
             <>
