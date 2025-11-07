@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { reportAPI } from '../api';
 import Breadcrumb from '../components/Breadcrumb';
+import DOMPurify from 'dompurify';
 
 // Dimension descriptions
 const DIMENSION_INFO = {
@@ -245,7 +246,7 @@ const OfflineReports = () => {
             <span>Close</span>
           </button>
         </div>
-        <div dangerouslySetInnerHTML={{ __html: viewingReport }} />
+        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(viewingReport) }} />
       </div>
     );
   }

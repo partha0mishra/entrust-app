@@ -26,6 +26,16 @@ DIMENSION_MAP = {
 
 def get_dimension_filename(dimension: str) -> str:
     """Convert dimension name to filename-safe format with underscores"""
+    import re
+
+    # Strict validation to prevent path traversal
+    if not dimension or len(dimension) > 100:
+        raise ValueError(f"Invalid dimension name length: {dimension}")
+
+    # Only allow alphanumeric, spaces, hyphens, underscores, and ampersands
+    if not re.match(r'^[a-zA-Z0-9_\-\s&]+$', dimension):
+        raise ValueError(f"Invalid dimension name characters: {dimension}")
+
     # If dimension is already in the mapped format, use it
     if dimension.lower() in [v.lower() for v in DIMENSION_MAP.values()]:
         return dimension.lower()
@@ -50,6 +60,15 @@ def get_report_paths(customer_code: str, dimension: str) -> Dict[str, str]:
     Returns:
         Dict with 'markdown', 'json', and 'html' paths
     """
+    import re
+
+    # Validate customer_code to prevent path traversal
+    if not customer_code or len(customer_code) > 50:
+        raise ValueError(f"Invalid customer code length: {customer_code}")
+
+    if not re.match(r'^[A-Z0-9_\-]+$', customer_code):
+        raise ValueError(f"Invalid customer code characters: {customer_code}")
+
     dimension_filename = get_dimension_filename(dimension)
     date_str = datetime.now().strftime("%Y%m%d")
 

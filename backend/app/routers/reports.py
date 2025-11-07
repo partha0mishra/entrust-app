@@ -845,23 +845,19 @@ async def get_overall_report(
 def check_reports_availability(
     customer_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_active_user)
+    current_user: models.User = Depends(auth.require_report_access)
 ):
     """
     Check which reports exist for today for all dimensions
     Only accessible by CXO and Sales roles
     """
-    # Check user role
-    if current_user.role not in ["CXO", "Sales", "Admin"]:
-        raise HTTPException(status_code=403, detail="Access denied. Only CXO, Sales, and Admin users can access reports.")
-
     # Check if customer exists
     customer = db.query(models.Customer).filter(models.Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
 
     # Check if user has access to this customer
-    if current_user.role == "Sales" and current_user.customer_id != customer_id:
+    if current_user.user_type == models.UserType.SALES and current_user.customer_id != customer_id:
         raise HTTPException(status_code=403, detail="Access denied to this customer's reports")
 
     # Get all dimensions
@@ -894,7 +890,7 @@ def get_html_report(
     customer_id: int,
     dimension: str,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_active_user)
+    current_user: models.User = Depends(auth.require_report_access)
 ):
     """
     Get the HTML report for a specific dimension
@@ -903,17 +899,13 @@ def get_html_report(
     from fastapi.responses import HTMLResponse
     import os
 
-    # Check user role
-    if current_user.role not in ["CXO", "Sales", "Admin"]:
-        raise HTTPException(status_code=403, detail="Access denied. Only CXO, Sales, and Admin users can access reports.")
-
     # Check if customer exists
     customer = db.query(models.Customer).filter(models.Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
 
     # Check if user has access to this customer
-    if current_user.role == "Sales" and current_user.customer_id != customer_id:
+    if current_user.user_type == models.UserType.SALES and current_user.customer_id != customer_id:
         raise HTTPException(status_code=403, detail="Access denied to this customer's reports")
 
     # Check if base path exists
@@ -933,7 +925,15 @@ def get_html_report(
         with open(html_path, 'r', encoding='utf-8') as f:
             html_content = f.read()
 
-        return HTMLResponse(content=html_content)
+        # Add security headers
+        return HTMLResponse(
+            content=html_content,
+            headers={
+                "Content-Security-Policy": "default-src 'self' 'unsafe-inline'; script-src 'none'; object-src 'none';",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY"
+            }
+        )
     except Exception as e:
-        logger.error(f"Error reading HTML report: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error reading HTML report: {str(e)}")
+        logger.error(f"Error reading HTML report for customer {customer_id}, dimension {dimension}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error reading HTML report. Please contact support.")
