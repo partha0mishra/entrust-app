@@ -9,7 +9,7 @@ import asyncio
 from .. import models, schemas, auth
 from ..database import get_db
 from ..llm_service import LLMService
-from ..report_utils import save_reports, get_cached_report
+from ..report_utils import save_reports, get_cached_report, check_report_exists_for_today, check_reports_path_exists, get_report_paths
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -839,3 +839,101 @@ async def get_overall_report(
         # Don't fail the request if saving fails
 
     return report_response
+
+
+@router.get("/customer/{customer_id}/reports/check-availability")
+def check_reports_availability(
+    customer_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    Check which reports exist for today for all dimensions
+    Only accessible by CXO and Sales roles
+    """
+    # Check user role
+    if current_user.role not in ["CXO", "Sales", "Admin"]:
+        raise HTTPException(status_code=403, detail="Access denied. Only CXO, Sales, and Admin users can access reports.")
+
+    # Check if customer exists
+    customer = db.query(models.Customer).filter(models.Customer.id == customer_id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    # Check if user has access to this customer
+    if current_user.role == "Sales" and current_user.customer_id != customer_id:
+        raise HTTPException(status_code=403, detail="Access denied to this customer's reports")
+
+    # Get all dimensions
+    dimensions = db.query(models.Question.dimension).distinct().all()
+    dimension_list = [d[0] for d in dimensions]
+    dimension_list.append("Overall")  # Add overall report
+
+    # Check folder path
+    folder_path_exists = check_reports_path_exists()
+
+    # Check availability for each dimension
+    availability = {}
+    for dimension in dimension_list:
+        availability[dimension] = check_report_exists_for_today(
+            customer_code=customer.customer_code,
+            dimension=dimension
+        )
+
+    return {
+        "customer_code": customer.customer_code,
+        "customer_name": customer.name,
+        "folder_path_exists": folder_path_exists,
+        "reports_base_path": "/app/entrust" if folder_path_exists else None,
+        "availability": availability
+    }
+
+
+@router.get("/customer/{customer_id}/reports/html/{dimension}")
+def get_html_report(
+    customer_id: int,
+    dimension: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_active_user)
+):
+    """
+    Get the HTML report for a specific dimension
+    Only accessible by CXO and Sales roles
+    """
+    from fastapi.responses import HTMLResponse
+    import os
+
+    # Check user role
+    if current_user.role not in ["CXO", "Sales", "Admin"]:
+        raise HTTPException(status_code=403, detail="Access denied. Only CXO, Sales, and Admin users can access reports.")
+
+    # Check if customer exists
+    customer = db.query(models.Customer).filter(models.Customer.id == customer_id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    # Check if user has access to this customer
+    if current_user.role == "Sales" and current_user.customer_id != customer_id:
+        raise HTTPException(status_code=403, detail="Access denied to this customer's reports")
+
+    # Check if base path exists
+    if not check_reports_path_exists():
+        raise HTTPException(status_code=404, detail="Reports folder not found. Please create the folder first.")
+
+    # Get report paths
+    paths = get_report_paths(customer.customer_code, dimension)
+    html_path = paths.get('html')
+
+    # Check if HTML report exists
+    if not html_path or not os.path.exists(html_path):
+        raise HTTPException(status_code=404, detail=f"HTML report not found for {dimension}. Please generate the report first.")
+
+    # Read HTML content and return as response
+    try:
+        with open(html_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+
+        return HTMLResponse(content=html_content)
+    except Exception as e:
+        logger.error(f"Error reading HTML report: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error reading HTML report: {str(e)}")

@@ -103,16 +103,28 @@ export default function Layout() {
               </Link>
             )}
             {canViewReports && (
-              <Link
-                to="/reports"
-                className={`px-4 py-2 rounded-lg font-semibold transition ${
-                  location.pathname === '/reports' 
-                    ? 'bg-encora-yellow-400 text-oxford-900' 
-                    : 'text-oxford-100 hover:bg-oxford-700'
-                }`}
-              >
-                Reports
-              </Link>
+              <>
+                <Link
+                  to="/reports"
+                  className={`px-4 py-2 rounded-lg font-semibold transition ${
+                    location.pathname === '/reports'
+                      ? 'bg-encora-yellow-400 text-oxford-900'
+                      : 'text-oxford-100 hover:bg-oxford-700'
+                  }`}
+                >
+                  Reports
+                </Link>
+                <Link
+                  to="/offline-reports"
+                  className={`px-4 py-2 rounded-lg font-semibold transition ${
+                    location.pathname === '/offline-reports'
+                      ? 'bg-encora-yellow-400 text-oxford-900'
+                      : 'text-oxford-100 hover:bg-oxford-700'
+                  }`}
+                >
+                  Offline Reports
+                </Link>
+              </>
             )}
           </div>
         </div>

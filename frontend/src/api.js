@@ -84,6 +84,11 @@ export const reportAPI = {
     api.get(`/reports/customer/${customerId}/overall/download`, {
       responseType: 'blob'
     }),
+  // Offline report generation endpoints
+  checkReportsAvailability: (customerId) =>
+    api.get(`/reports/customer/${customerId}/reports/check-availability`),
+  getHtmlReport: (customerId, dimension) =>
+    api.get(`/reports/customer/${customerId}/reports/html/${dimension}`),
 };
 
 export default api;

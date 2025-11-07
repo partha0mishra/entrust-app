@@ -11,6 +11,7 @@ import LLMConfig from './pages/LLMConfig';
 import SurveyDashboard from './pages/SurveyDashboard';
 import SurveySection from './pages/SurveySection';
 import Reports from './pages/Reports';
+import OfflineReports from './pages/OfflineReports';
 
 // Component to handle default redirect based on user role
 function DefaultRedirect() {
@@ -73,6 +74,7 @@ function App() {
           
           {/* Reports routes */}
           <Route path="reports" element={<Reports />} />
+          <Route path="offline-reports" element={<OfflineReports />} />
         </Route>
       </Routes>
     </BrowserRouter>
