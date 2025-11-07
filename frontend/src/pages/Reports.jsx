@@ -109,7 +109,7 @@ export default function Reports() {
     setShowJson(false);
   };
 
-  const loadDimensionReport = async (dimension) => {
+  const loadDimensionReport = async (dimension, forceRegenerate = false) => {
     setSelectedDimension(dimension);
     setLoading(true);
     setReport(null);
@@ -124,7 +124,7 @@ export default function Reports() {
         setCustomerCode(user.customer_code);
       }
 
-      const response = await reportAPI.getDimensionReport(customerId, dimension);
+      const response = await reportAPI.getDimensionReport(customerId, dimension, forceRegenerate);
       setReport(response.data);
       setShowJson(false);
     } catch (error) {
@@ -135,7 +135,7 @@ export default function Reports() {
     }
   };
 
-  const loadOverallReport = async () => {
+  const loadOverallReport = async (forceRegenerate = false) => {
     setSelectedDimension('Overall');
     setLoading(true);
     setReport(null);
@@ -150,7 +150,7 @@ export default function Reports() {
         setCustomerCode(user.customer_code);
       }
 
-      const response = await reportAPI.getOverallReport(customerId);
+      const response = await reportAPI.getOverallReport(customerId, forceRegenerate);
       setReport(response.data);
       setShowJson(false);
     } catch (error) {
@@ -264,9 +264,9 @@ export default function Reports() {
             <button
               onClick={() => {
                 if (selectedDimension === 'Overall') {
-                  loadOverallReport();
+                  loadOverallReport(true);
                 } else {
-                  loadDimensionReport(selectedDimension);
+                  loadDimensionReport(selectedDimension, true);
                 }
               }}
               className="px-4 py-2 bg-encora-green text-white rounded-lg hover:bg-green-600 transition font-semibold shadow-md flex items-center space-x-2"
@@ -326,9 +326,9 @@ export default function Reports() {
             <button
               onClick={() => {
                 if (selectedDimension === 'Overall') {
-                  loadOverallReport();
+                  loadOverallReport(true);
                 } else {
-                  loadDimensionReport(selectedDimension);
+                  loadDimensionReport(selectedDimension, true);
                 }
               }}
               className="px-4 py-2 bg-encora-green text-white rounded-lg hover:bg-green-600 transition font-semibold shadow-md flex items-center space-x-2"

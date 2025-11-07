@@ -68,14 +68,19 @@ export const surveyAPI = {
 export const reportAPI = {
   getCustomers: () => api.get('/reports/customers'),
   getDimensions: (customerId) => api.get(`/reports/customer/${customerId}/dimensions`),
-  getDimensionReport: (customerId, dimension) => 
-    api.get(`/reports/customer/${customerId}/dimension/${dimension}`),
-  getOverallReport: (customerId) => api.get(`/reports/customer/${customerId}/overall`),
-  downloadDimensionPDF: (customerId, dimension) => 
+  getDimensionReport: (customerId, dimension, forceRegenerate = false) =>
+    api.get(`/reports/customer/${customerId}/dimension/${dimension}`, {
+      params: { force_regenerate: forceRegenerate }
+    }),
+  getOverallReport: (customerId, forceRegenerate = false) =>
+    api.get(`/reports/customer/${customerId}/overall`, {
+      params: { force_regenerate: forceRegenerate }
+    }),
+  downloadDimensionPDF: (customerId, dimension) =>
     api.get(`/reports/customer/${customerId}/dimension/${dimension}/download`, {
       responseType: 'blob'
     }),
-  downloadOverallPDF: (customerId) => 
+  downloadOverallPDF: (customerId) =>
     api.get(`/reports/customer/${customerId}/overall/download`, {
       responseType: 'blob'
     }),
