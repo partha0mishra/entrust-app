@@ -35,6 +35,7 @@ services:
     volumes:
       - ./backend:/app
       - ./questions.json:/app/questions.json
+      - ~/entrust:/app/entrust
     networks:
       - entrust_network
     extra_hosts:
@@ -67,6 +68,7 @@ services:
       - ./frontend:/app
       - ./backend:/backend
       - ./secrets.json:/secrets.json:ro
+      - ~/entrust:/app/entrust
       - /app/node_modules
     networks:
       - entrust_network
