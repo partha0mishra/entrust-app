@@ -1,0 +1,61 @@
+# Data Security and Access Control
+
+## NIST Cybersecurity Framework
+
+### Core Functions
+
+1. **Identify**
+   - Asset management
+   - Risk assessment
+   - Governance
+
+2. **Protect**
+   - Access control
+   - Data security
+   - Protective technology
+
+3. **Detect**
+   - Anomaly detection
+   - Security monitoring
+   - Detection processes
+
+4. **Respond**
+   - Response planning
+   - Communications
+   - Analysis and mitigation
+
+5. **Recover**
+   - Recovery planning
+   - Improvements
+   - Communications
+
+## ISO 27001 Controls
+
+### Access Control (A.9)
+- Access control policy
+- User access management
+- User responsibilities
+- System and application access control
+
+### Cryptography (A.10)
+- Cryptographic controls
+- Key management
+
+### Physical Security (A.11)
+- Secure areas
+- Equipment security
+
+### Operations Security (A.12)
+- Operational procedures
+- Protection from malware
+- Backup
+- Logging and monitoring
+
+## Best Practices
+
+- Principle of least privilege
+- Multi-factor authentication
+- Regular access reviews
+- Encryption at rest and in transit
+- Security monitoring and logging
+- Incident response procedures

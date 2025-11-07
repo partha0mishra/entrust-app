@@ -1,0 +1,41 @@
+# Privacy and Compliance Best Practices
+
+## GDPR Key Principles (Article 5)
+
+1. **Lawfulness, Fairness, and Transparency**
+   - Process data lawfully, fairly, and transparently
+   - Clear communication with data subjects
+
+2. **Purpose Limitation**
+   - Collect data for specified, explicit, and legitimate purposes
+   - No further processing incompatible with original purpose
+
+3. **Data Minimization**
+   - Adequate, relevant, and limited to what's necessary
+   - Avoid collecting excessive data
+
+4. **Accuracy**
+   - Keep personal data accurate and up to date
+   - Erase or rectify inaccurate data
+
+5. **Storage Limitation**
+   - Keep data only as long as necessary
+   - Implement data retention policies
+
+6. **Integrity and Confidentiality**
+   - Ensure appropriate security
+   - Protect against unauthorized processing
+
+## CCPA Requirements
+
+- **Right to Know**: What personal information is collected
+- **Right to Delete**: Request deletion of personal information
+- **Right to Opt-Out**: Opt out of sale of personal information
+- **Right to Non-Discrimination**: Equal service regardless of privacy choices
+
+## ISO 27701 Privacy Controls
+
+- Privacy impact assessments
+- Consent management
+- Data subject rights management
+- Privacy by design and by default

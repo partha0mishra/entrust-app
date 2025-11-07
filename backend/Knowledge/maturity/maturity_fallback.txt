@@ -1,0 +1,50 @@
+# Data Governance Maturity Models
+
+## DAMA-DMBOK Maturity Levels
+
+### Level 1: Initial (Ad Hoc)
+- Processes are unpredictable, poorly controlled, and reactive
+- Work gets completed but is often delayed and over budget
+- Success depends on individual heroics
+
+### Level 2: Repeatable (Managed)
+- Basic project management processes established
+- Repeatable practices for similar types of projects
+- Success can be repeated for projects with similar applications
+
+### Level 3: Defined (Standardized)
+- Processes well characterized and understood
+- Documented in standards, procedures, tools, and methods
+- Organization-wide standards provide guidance across projects
+
+### Level 4: Managed (Quantitatively Managed)
+- Detailed measures of process and product quality collected
+- Processes and products are quantitatively understood and controlled
+- Performance is predictable
+
+### Level 5: Optimized (Continuous Improvement)
+- Focus on continually improving process performance
+- Continuous process improvement is enabled by quantitative feedback
+- Piloting innovative ideas and technologies
+
+## Gartner EIM Maturity Stages
+
+### Stage 1: Awareness
+- Recognizing the need for data governance
+- Ad hoc data management practices
+
+### Stage 2: Reactive
+- Responding to data issues as they arise
+- Basic policies beginning to emerge
+
+### Stage 3: Intentional
+- Proactive data governance initiatives
+- Defined roles and responsibilities
+
+### Stage 4: Managed
+- Systematic approach to data management
+- Metrics and KPIs in place
+
+### Stage 5: Effective
+- Optimized data governance
+- Data treated as strategic asset

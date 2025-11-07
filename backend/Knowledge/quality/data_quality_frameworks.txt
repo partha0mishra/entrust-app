@@ -1,0 +1,64 @@
+# Data Quality Management
+
+## ISO 8000 Data Quality Dimensions
+
+### Accuracy
+- Data correctly represents reality
+- Validation against authoritative sources
+- Error detection and correction
+
+### Completeness
+- All required data present
+- No missing values where needed
+- Coverage of entire domain
+
+### Consistency
+- Data uniform across systems
+- No contradictions
+- Adherence to standards
+
+### Timeliness
+- Data available when needed
+- Up-to-date information
+- Appropriate refresh rates
+
+### Validity
+- Conformance to defined formats
+- Business rule compliance
+- Domain constraint adherence
+
+### Uniqueness
+- No unwanted duplicates
+- Proper entity resolution
+- Single source of truth
+
+## Total Data Quality Management (TDQM)
+
+### Define
+- Quality requirements
+- Measurement criteria
+- Stakeholder needs
+
+### Measure
+- Quality metrics
+- Profiling and assessment
+- Issue identification
+
+### Analyze
+- Root cause analysis
+- Impact assessment
+- Trend analysis
+
+### Improve
+- Data cleansing
+- Process improvements
+- Preventive measures
+
+## Best Practices
+
+- Establish data quality KPIs
+- Implement automated quality checks
+- Regular data profiling
+- Quality scorecards and dashboards
+- Continuous improvement culture
+- Data quality tools (Great Expectations, Deequ, etc.)
