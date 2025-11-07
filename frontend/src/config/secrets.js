@@ -4,13 +4,13 @@
 
 export const SECRETS = {
   azure: {
-    endpoint: '',
-    apiKey: '',
+    endpoint: 'https://datapractice-datamapper.openai.azure.com/',
+    apiKey: '3THV7FURouRwstCQ8pz450Gc7uF2A5HdlL6E2c9yFTTQWp9ExnUHJQQJ99BIACHYHv6XJ3w3AAABACOGsMxZ',
     apiVersion: '2024-12-01-preview'
   },
   aws: {
     region: 'us-east-1',
-    accessKeyId: '',
-    secretAccessKey: ''
+    accessKeyId: 'AKIAVIKNFMGYSXQUB3DA',
+    secretAccessKey: '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'
   }
 };
