@@ -87,3 +87,11 @@ docker-compose.override.yml
 .DS_Store
 Thumbs.db
 
+# Secrets
+secrets.json
+# Note: frontend/src/config/secrets.js is committed with empty values as a template
+# The load_secrets.py script overwrites it with actual values from secrets.json at runtime
+
+# API Access documentation (contains secrets)
+api access/
+

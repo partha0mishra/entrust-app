@@ -23,20 +23,53 @@ async def create_or_update_llm_config(
     
     if existing:
         logger.info(f"Updating existing config ID: {existing.id}")
+        
+        # Determine which fields are critical and require retesting
+        critical_fields = []
+        if config.provider_type == models.LLMProviderType.AZURE:
+            critical_fields = ['azure_endpoint', 'azure_api_key', 'azure_deployment_name', 'azure_api_version']
+        elif config.provider_type == models.LLMProviderType.BEDROCK:
+            critical_fields = ['aws_region', 'aws_access_key_id', 'aws_secret_access_key', 'aws_model_id']
+        elif config.provider_type == models.LLMProviderType.LOCAL:
+            critical_fields = ['api_url', 'api_key', 'model_name']
+        
+        # Check if any critical fields changed
+        critical_field_changed = False
+        for key, value in config.dict().items():
+            if key in critical_fields and value is not None:
+                old_value = getattr(existing, key, None)
+                if old_value != value:
+                    critical_field_changed = True
+                    break
+        
+        # Update all fields
         for key, value in config.dict().items():
             setattr(existing, key, value)
-        existing.status = "Not Tested"
+        
+        # Only reset status to "Not Tested" if critical fields changed
+        # This way, if user just changes non-critical fields (like reasoning_effort), 
+        # the status stays as "Success" if it was already tested
+        # NOTE: We do NOT auto-test here - user must explicitly click "Test" button
+        if critical_field_changed:
+            existing.status = "Not Tested"
+            logger.info(f"Critical fields changed, resetting status to 'Not Tested' (user must test manually)")
+        else:
+            logger.info(f"No critical fields changed, preserving status: {existing.status}")
+        
         db.commit()
         db.refresh(existing)
-        logger.info(f"Updated config: id={existing.id}, api_url={existing.api_url}")
+        logger.info(f"Updated config: id={existing.id}, status={existing.status}")
         return existing
     else:
         logger.info("Creating new config")
-        db_config = models.LLMConfig(**config.dict())
+        # Ensure new configs always start with "Not Tested" status
+        config_dict = config.dict()
+        config_dict['status'] = "Not Tested"  # Explicitly set status, overriding any from schema
+        db_config = models.LLMConfig(**config_dict)
         db.add(db_config)
         db.commit()
         db.refresh(db_config)
-        logger.info(f"Created config: id={db_config.id}, api_url={db_config.api_url}")
+        logger.info(f"Created config: id={db_config.id}, status={db_config.status}")
         return db_config
 
 @router.get("/", response_model=List[schemas.LLMConfig])
