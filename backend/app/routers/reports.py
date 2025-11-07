@@ -595,19 +595,21 @@ async def get_dimension_report(
         "llm_error": llm_error if llm_error else ("Orchestrate LLM not configured or test not successful" if not (llm_config and llm_config.status == "Success") else None)
     }
 
-    # Save reports to disk (markdown and JSON)
+    # Save reports to disk (markdown and JSON) using customer storage configuration
     try:
         save_result = save_reports(
             customer_code=customer.customer_code,
             customer_name=customer.name,
             dimension=dimension,
             report_data=report_response,
-            rag_context=None  # TODO: Add RAG context if available
+            rag_context=None,  # TODO: Add RAG context if available
+            customer=customer  # Pass customer for storage configuration
         )
         if save_result.get('error'):
             logger.warning(f"Report save had issues: {save_result['error']}")
         else:
-            logger.info(f"Reports saved: MD={save_result.get('markdown_path')}, JSON={save_result.get('json_path')}")
+            storage_type = save_result.get('storage_type', 'LOCAL')
+            logger.info(f"Reports saved to {storage_type}: MD={save_result.get('markdown_path')}, JSON={save_result.get('json_path')}")
     except Exception as e:
         logger.error(f"Failed to save reports: {str(e)}")
         # Don't fail the request if saving fails
@@ -821,19 +823,21 @@ async def get_overall_report(
         "overall_error": overall_error
     }
 
-    # Save reports to disk (markdown and JSON)
+    # Save reports to disk (markdown and JSON) using customer storage configuration
     try:
         save_result = save_reports(
             customer_code=customer.customer_code,
             customer_name=customer.name,
             dimension="Overall",
             report_data=report_response,
-            rag_context=None  # TODO: Add RAG context if available
+            rag_context=None,  # TODO: Add RAG context if available
+            customer=customer  # Pass customer for storage configuration
         )
         if save_result.get('error'):
             logger.warning(f"Report save had issues: {save_result['error']}")
         else:
-            logger.info(f"Overall reports saved: MD={save_result.get('markdown_path')}, JSON={save_result.get('json_path')}")
+            storage_type = save_result.get('storage_type', 'LOCAL')
+            logger.info(f"Overall reports saved to {storage_type}: MD={save_result.get('markdown_path')}, JSON={save_result.get('json_path')}")
     except Exception as e:
         logger.error(f"Failed to save overall reports: {str(e)}")
         # Don't fail the request if saving fails

@@ -10,9 +10,14 @@ class UserType(str, enum.Enum):
     PARTICIPANT = "Participant"
     SALES = "Sales"
 
+class StorageType(str, enum.Enum):
+    LOCAL = "LOCAL"
+    S3 = "S3"
+    AZURE_BLOB = "AZURE_BLOB"
+
 class Customer(Base):
     __tablename__ = "customers"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     customer_code = Column(String(50), unique=True, index=True)
     name = Column(String(255), nullable=False)
@@ -22,7 +27,24 @@ class Customer(Base):
     is_deleted = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
+    # Report storage configuration (admin-configured per customer)
+    storage_type = Column(SQLEnum(StorageType), default=StorageType.LOCAL, nullable=False)
+    storage_fallback_enabled = Column(Boolean, default=True)  # Fallback to local if cloud fails
+
+    # S3 configuration
+    s3_bucket_name = Column(String(255), nullable=True)
+    s3_region = Column(String(50), nullable=True)
+    s3_access_key_id = Column(String(500), nullable=True)
+    s3_secret_access_key = Column(String(500), nullable=True)
+    s3_prefix = Column(String(255), nullable=True)  # Optional prefix/folder in bucket
+
+    # Azure Blob configuration
+    azure_storage_account = Column(String(255), nullable=True)
+    azure_container_name = Column(String(255), nullable=True)
+    azure_connection_string = Column(String(1000), nullable=True)
+    azure_prefix = Column(String(255), nullable=True)  # Optional prefix/folder in container
+
     users = relationship("User", back_populates="customer")
     surveys = relationship("Survey", back_populates="customer")
 

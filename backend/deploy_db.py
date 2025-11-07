@@ -27,6 +27,7 @@ Available Migrations:
     - llm_providers      : Add multi-provider LLM support (LOCAL, BEDROCK, AZURE)
     - questions_fields   : Add process and lifecycle_stage columns to questions table
     - user_submissions   : Create user_survey_submissions table
+    - customer_storage   : Add storage configuration to customers table (S3, Azure Blob)
 """
 
 import sys
@@ -403,6 +404,58 @@ class DatabaseDeployment:
             logger.error(f"✗ Migration failed: {e}")
             return False
 
+    def migrate_customer_storage(self):
+        """Add storage configuration to customers table"""
+        logger.info("\n[Migration: customer_storage] Adding storage configuration...")
+
+        if self.column_exists('customers', 'storage_type'):
+            logger.info("⚠ Storage configuration columns already exist.")
+            return True
+
+        try:
+            # Create ENUM type for storage
+            self.execute_sql("""
+                DO $$ BEGIN
+                    CREATE TYPE storagetype AS ENUM ('LOCAL', 'S3', 'AZURE_BLOB');
+                EXCEPTION
+                    WHEN duplicate_object THEN null;
+                END $$;
+            """)
+
+            # Add storage columns
+            migrations = [
+                ("storage_type", "ALTER TABLE customers ADD COLUMN storage_type storagetype DEFAULT 'LOCAL'"),
+                ("storage_fallback_enabled", "ALTER TABLE customers ADD COLUMN storage_fallback_enabled BOOLEAN DEFAULT TRUE"),
+                # S3 fields
+                ("s3_bucket_name", "ALTER TABLE customers ADD COLUMN s3_bucket_name VARCHAR(255)"),
+                ("s3_region", "ALTER TABLE customers ADD COLUMN s3_region VARCHAR(50)"),
+                ("s3_access_key_id", "ALTER TABLE customers ADD COLUMN s3_access_key_id TEXT"),
+                ("s3_secret_access_key", "ALTER TABLE customers ADD COLUMN s3_secret_access_key TEXT"),
+                ("s3_prefix", "ALTER TABLE customers ADD COLUMN s3_prefix VARCHAR(255)"),
+                # Azure Blob fields
+                ("azure_storage_account", "ALTER TABLE customers ADD COLUMN azure_storage_account VARCHAR(255)"),
+                ("azure_container_name", "ALTER TABLE customers ADD COLUMN azure_container_name VARCHAR(255)"),
+                ("azure_connection_string", "ALTER TABLE customers ADD COLUMN azure_connection_string TEXT"),
+                ("azure_prefix", "ALTER TABLE customers ADD COLUMN azure_prefix VARCHAR(255)"),
+            ]
+
+            for col_name, sql in migrations:
+                if self.column_exists('customers', col_name):
+                    logger.info(f"  ⚠ Column '{col_name}' already exists, skipping.")
+                    continue
+
+                if not self.execute_sql(sql):
+                    logger.error(f"  ✗ Failed to add column '{col_name}'")
+                    return False
+
+            logger.info("✓ Storage configuration added successfully!")
+            logger.info("   Supported storage types: LOCAL, S3, AZURE_BLOB")
+            logger.info("   Fallback to local storage enabled by default")
+            return True
+        except Exception as e:
+            logger.error(f"✗ Migration failed: {e}")
+            return False
+
     def run_all_migrations(self):
         """Run all migrations in order"""
         logger.info("\n" + "=" * 70)
@@ -415,6 +468,7 @@ class DatabaseDeployment:
             ("llm_providers", self.migrate_llm_providers),
             ("questions_fields", self.migrate_questions_fields),
             ("user_submissions", self.migrate_user_submissions),
+            ("customer_storage", self.migrate_customer_storage),
         ]
 
         success_count = 0
@@ -481,7 +535,7 @@ def main():
     parser.add_argument('--migrate-only', action='store_true',
                         help='Run all migrations only')
     parser.add_argument('--migrate', type=str,
-                        choices=['password', 'llm_model', 'llm_providers', 'questions_fields', 'user_submissions'],
+                        choices=['password', 'llm_model', 'llm_providers', 'questions_fields', 'user_submissions', 'customer_storage'],
                         help='Run a specific migration')
 
     args = parser.parse_args()
@@ -504,6 +558,7 @@ def main():
                     'llm_providers': deployment.migrate_llm_providers,
                     'questions_fields': deployment.migrate_questions_fields,
                     'user_submissions': deployment.migrate_user_submissions,
+                    'customer_storage': deployment.migrate_customer_storage,
                 }
                 migration_map[args.migrate]()
                 deployment.print_summary()

@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Optional, List
 from pathlib import Path
+from .storage_service import StorageService
 
 logger = logging.getLogger(__name__)
 
@@ -1044,10 +1045,11 @@ def save_reports(
     customer_name: str,
     dimension: str,
     report_data: Dict,
-    rag_context: Optional[str] = None
+    rag_context: Optional[str] = None,
+    customer=None
 ) -> Dict[str, Optional[str]]:
     """
-    Save reports in markdown, JSON, and HTML formats
+    Save reports in markdown, JSON, and HTML formats using customer storage configuration
 
     Args:
         customer_code: Customer code
@@ -1055,6 +1057,7 @@ def save_reports(
         dimension: Dimension name
         report_data: Complete report data dictionary
         rag_context: Optional RAG context that was retrieved
+        customer: Customer model instance (for storage configuration)
 
     Returns:
         Dict with 'markdown_path', 'json_path', and 'html_path' (None if path doesn't exist or save failed)
@@ -1063,22 +1066,28 @@ def save_reports(
         "markdown_path": None,
         "json_path": None,
         "html_path": None,
-        "error": None
+        "error": None,
+        "storage_type": "LOCAL"  # Default
     }
 
-    # Check if base path exists
-    if not check_reports_path_exists():
-        logger.warning(f"Reports base path {REPORTS_BASE_PATH} does not exist. Skipping report save.")
-        result["error"] = f"Reports path {REPORTS_BASE_PATH} not accessible"
-        return result
-
     try:
+        # Initialize storage service with customer configuration
+        storage_service = StorageService(customer)
+        result["storage_type"] = storage_service.storage_type
+
+        # For cloud storage, check if local path exists for fallback
+        if storage_service.storage_type != "LOCAL" and storage_service.fallback_enabled:
+            if not check_reports_path_exists():
+                logger.warning(f"Local fallback path {REPORTS_BASE_PATH} does not exist. Cloud-only mode.")
+
         paths = get_report_paths(customer_code, dimension)
 
-        # Create directories if they don't exist
-        os.makedirs(paths['markdown_dir'], exist_ok=True)
-        os.makedirs(paths['json_dir'], exist_ok=True)
-        os.makedirs(paths['html_dir'], exist_ok=True)
+        # Create directories if using local storage or fallback
+        if storage_service.storage_type == "LOCAL" or storage_service.fallback_enabled:
+            if check_reports_path_exists():
+                os.makedirs(paths['markdown_dir'], exist_ok=True)
+                os.makedirs(paths['json_dir'], exist_ok=True)
+                os.makedirs(paths['html_dir'], exist_ok=True)
 
         # Create markdown report
         markdown_content = create_markdown_report(
@@ -1097,10 +1106,12 @@ def save_reports(
         )
 
         # Save markdown
-        with open(paths['markdown'], 'w', encoding='utf-8') as f:
-            f.write(markdown_content)
-        result['markdown_path'] = paths['markdown']
-        logger.info(f"Saved markdown report to {paths['markdown']}")
+        success, error = storage_service.save_file(paths['markdown'], markdown_content, 'text/markdown')
+        if success:
+            result['markdown_path'] = paths['markdown']
+            logger.info(f"Saved markdown report: {paths['markdown']}")
+        else:
+            logger.error(f"Failed to save markdown report: {error}")
 
         # Create HTML report
         html_content = create_html_report(
@@ -1122,10 +1133,12 @@ def save_reports(
         )
 
         # Save HTML
-        with open(paths['html'], 'w', encoding='utf-8') as f:
-            f.write(html_content)
-        result['html_path'] = paths['html']
-        logger.info(f"Saved HTML report to {paths['html']}")
+        success, error = storage_service.save_file(paths['html'], html_content, 'text/html')
+        if success:
+            result['html_path'] = paths['html']
+            logger.info(f"Saved HTML report: {paths['html']}")
+        else:
+            logger.error(f"Failed to save HTML report: {error}")
 
         # Create JSON report with full context
         json_data = {
@@ -1138,10 +1151,19 @@ def save_reports(
         }
 
         # Save JSON
-        with open(paths['json'], 'w', encoding='utf-8') as f:
-            json.dump(json_data, f, indent=2, ensure_ascii=False)
-        result['json_path'] = paths['json']
-        logger.info(f"Saved JSON report to {paths['json']}")
+        json_content = json.dumps(json_data, indent=2, ensure_ascii=False)
+        success, error = storage_service.save_file(paths['json'], json_content, 'application/json')
+        if success:
+            result['json_path'] = paths['json']
+            logger.info(f"Saved JSON report: {paths['json']}")
+        else:
+            logger.error(f"Failed to save JSON report: {error}")
+
+        # Report summary
+        if result['markdown_path'] or result['json_path'] or result['html_path']:
+            logger.info(f"Report saved successfully to {result['storage_type']} storage")
+        else:
+            result["error"] = "Failed to save any report files"
 
     except Exception as e:
         logger.error(f"Error saving reports: {str(e)}")
