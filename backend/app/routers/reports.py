@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Dict, Optional
@@ -9,6 +9,7 @@ import asyncio
 from .. import models, schemas, auth
 from ..database import get_db
 from ..llm_service import LLMService
+from ..report_utils import save_reports, get_cached_report
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -273,6 +274,7 @@ def get_dimension_reports(
 async def get_dimension_report(
     customer_id: int,
     dimension: str,
+    force_regenerate: bool = Query(False, description="Force regeneration of report even if cached version exists"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
@@ -289,6 +291,21 @@ async def get_dimension_report(
 
     if not survey:
         return {"error": "No survey data available"}
+
+    # Get customer information
+    customer = db.query(models.Customer).filter(
+        models.Customer.id == customer_id
+    ).first()
+
+    if not customer:
+        return {"error": "Customer not found"}
+
+    # Check for cached report if not forcing regeneration
+    if not force_regenerate:
+        cached_report = get_cached_report(customer.customer_code, dimension, survey.updated_at)
+        if cached_report:
+            logger.info(f"Returning cached report for {customer.customer_code}/{dimension}")
+            return cached_report
 
     questions = db.query(models.Question).filter(
         models.Question.dimension == dimension
@@ -524,7 +541,8 @@ async def get_dimension_report(
         except (asyncio.TimeoutError, Exception):
             pass  # Silently skip if analysis fails or times out
 
-    return {
+    # Prepare report data
+    report_response = {
         "dimension": dimension,
         "overall_metrics": overall_metrics,
         "questions": report_data,
@@ -549,10 +567,30 @@ async def get_dimension_report(
         "llm_error": llm_error if llm_error else ("Orchestrate LLM not configured or test not successful" if not (llm_config and llm_config.status == "Success") else None)
     }
 
+    # Save reports to disk (markdown and JSON)
+    try:
+        save_result = save_reports(
+            customer_code=customer.customer_code,
+            customer_name=customer.name,
+            dimension=dimension,
+            report_data=report_response,
+            rag_context=None  # TODO: Add RAG context if available
+        )
+        if save_result.get('error'):
+            logger.warning(f"Report save had issues: {save_result['error']}")
+        else:
+            logger.info(f"Reports saved: MD={save_result.get('markdown_path')}, JSON={save_result.get('json_path')}")
+    except Exception as e:
+        logger.error(f"Failed to save reports: {str(e)}")
+        # Don't fail the request if saving fails
+
+    return report_response
+
 
 @router.get("/customer/{customer_id}/overall")
 async def get_overall_report(
     customer_id: int,
+    force_regenerate: bool = Query(False, description="Force regeneration of report even if cached version exists"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
@@ -569,11 +607,21 @@ async def get_overall_report(
 
     if not survey:
         return {"error": "No survey data available"}
-    
+
     customer = db.query(models.Customer).filter(
         models.Customer.id == customer_id
     ).first()
-    
+
+    if not customer:
+        return {"error": "Customer not found"}
+
+    # Check for cached report if not forcing regeneration
+    if not force_regenerate:
+        cached_report = get_cached_report(customer.customer_code, "Overall", survey.updated_at)
+        if cached_report:
+            logger.info(f"Returning cached overall report for {customer.customer_code}")
+            return cached_report
+
     dimensions_query = db.query(models.Question.dimension).distinct().all()
     dimensions = [d[0] for d in dimensions_query]
     
@@ -732,7 +780,8 @@ async def get_overall_report(
         overall_error = str(e)
         logger.error(f"Exception generating overall summary: {str(e)}\n{traceback.format_exc()}")
     
-    return {
+    # Prepare report data
+    report_response = {
         "customer_code": customer.customer_code if customer else None,
         "customer_name": customer.name if customer else None,
         "survey_status": survey.status,
@@ -743,3 +792,22 @@ async def get_overall_report(
         "overall_summary": overall_summary,
         "overall_error": overall_error
     }
+
+    # Save reports to disk (markdown and JSON)
+    try:
+        save_result = save_reports(
+            customer_code=customer.customer_code,
+            customer_name=customer.name,
+            dimension="Overall",
+            report_data=report_response,
+            rag_context=None  # TODO: Add RAG context if available
+        )
+        if save_result.get('error'):
+            logger.warning(f"Report save had issues: {save_result['error']}")
+        else:
+            logger.info(f"Overall reports saved: MD={save_result.get('markdown_path')}, JSON={save_result.get('json_path')}")
+    except Exception as e:
+        logger.error(f"Failed to save overall reports: {str(e)}")
+        # Don't fail the request if saving fails
+
+    return report_response
