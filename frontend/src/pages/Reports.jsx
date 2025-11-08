@@ -282,7 +282,7 @@ export default function Reports() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <button
-          onClick={loadOverallReport}
+          onClick={() => loadOverallReport()}
           className="bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg shadow-md p-6 hover:shadow-lg transition text-left"
         >
           <h3 className="text-xl font-bold mb-2">Overall Report</h3>

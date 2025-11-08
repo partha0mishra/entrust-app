@@ -27,10 +27,22 @@ PROCESS BREAKDOWN:
 LIFECYCLE STAGE BREAKDOWN:
 {lifecycle_text}
 
-Provide a comprehensive analysis with the following sections. **USE TABLES EXTENSIVELY** for all data, metrics, and comparisons:
+Provide a comprehensive analysis with the following sections. **USE MARKDOWN TABLES EXTENSIVELY** for all data, metrics, and comparisons.
+
+**IMPORTANT TABLE FORMAT REQUIREMENTS:**
+- Use standard markdown table syntax with pipes (|) and dashes (-)
+- DO NOT use ASCII box-drawing characters like +-----------+
+- DO NOT use box art or ASCII art for tables
+- Use this format ONLY:
+
+```
+| Column 1 | Column 2 |
+|----------|----------|
+| Data 1   | Data 2   |
+```
 
 ## Strategic Observations
-Present key insights in a table format:
+Present key insights in a markdown table format:
 
 | Observation | Impact Level | Evidence | Recommendation |
 |------------|--------------|----------|----------------|
@@ -71,14 +83,27 @@ Present key insights in a table format:
 
 **Format your response in markdown with:**
 - Clear headers and section breaks
-- **Extensive use of well-formatted tables** for all data
+- **Extensive use of well-formatted MARKDOWN tables** (using | and - ONLY) for all data
+- DO NOT use ASCII box-drawing characters (+-----------+) or box art
+- Use standard markdown table syntax as shown in examples above
 - Proper table alignment and spacing
 - Visual separators between major sections
 - Bold text for emphasis in table headers
-- Be specific and actionable."""
+- Be specific and actionable.
+
+**REMINDER:** All tables MUST use markdown format with pipes (|) and dashes (-), NOT ASCII art."""
 
 
-DEEP_DIMENSION_ANALYSIS_SYSTEM_PROMPT = "You are a senior data governance expert writing a professional strategic report. Write in a formal, report-style format suitable for executive review. Use third-person perspective. **CRITICALLY IMPORTANT: Use well-formatted markdown tables extensively for all data, metrics, comparisons, and action items. Tables must be properly aligned, scannable, and visually appealing for human readers.** Provide clear, actionable insights in markdown format with proper headers, tables, bullet points, and line breaks."
+DEEP_DIMENSION_ANALYSIS_SYSTEM_PROMPT = """You are a senior data governance expert writing a professional strategic report. Write in a formal, report-style format suitable for executive review. Use third-person perspective.
+
+**CRITICALLY IMPORTANT TABLE FORMAT RULES:**
+1. Use ONLY standard markdown table syntax with pipes (|) and dashes (-)
+2. NEVER use ASCII box-drawing characters like +-----------+ or +-----+-----+
+3. NEVER use ASCII art or box art for tables
+4. Use this format ONLY: | Column | Column |\n|--------|--------|\n| Data | Data |
+5. All tables must be well-formatted, properly aligned, scannable, and visually appealing for human readers
+
+Provide clear, actionable insights in markdown format with proper headers, tables, bullet points, and line breaks. All structured data MUST be in proper markdown tables."""
 
 
 def get_facet_analysis_prompt(
@@ -103,10 +128,12 @@ Questions in this {facet_type}:
 Sample Comments:
 {comments_text}
 
-Provide analysis with these sections. **USE TABLES** for all structured data:
+Provide analysis with these sections. **USE MARKDOWN TABLES** for all structured data.
+
+**IMPORTANT:** Use standard markdown table syntax (| and -) ONLY. DO NOT use ASCII box-drawing characters (+-----------+).
 
 ## Performance Assessment
-Present assessment in table format:
+Present assessment in markdown table format:
 
 | Metric | Current Value | Target Value | Gap | Status |
 |--------|--------------|--------------|-----|--------|
@@ -141,12 +168,20 @@ Present metrics in table format:
 
 **Format in markdown with:**
 - Clear headers
-- **Well-formatted tables** for all structured information
+- **Well-formatted MARKDOWN tables** (using | and - ONLY) for all structured information
+- DO NOT use ASCII box-drawing characters (+-----------+)
 - Proper alignment and spacing
 - Visual clarity for human readers"""
 
 
-FACET_ANALYSIS_SYSTEM_PROMPT = "You are a data governance specialist writing a focused analysis report. Write in a professional, report-style format. Use third-person perspective. **CRITICALLY IMPORTANT: Present all structured data, metrics, recommendations, and comparisons in well-formatted markdown tables. Tables must be properly aligned and visually clear for human readers.** Provide specific, actionable insights."
+FACET_ANALYSIS_SYSTEM_PROMPT = """You are a data governance specialist writing a focused analysis report. Write in a professional, report-style format. Use third-person perspective.
+
+**CRITICALLY IMPORTANT TABLE FORMAT RULES:**
+1. Use ONLY standard markdown table syntax with pipes (|) and dashes (-)
+2. NEVER use ASCII box-drawing characters like +-----------+
+3. All tables must use format: | Column | Column |\n|--------|--------|\n| Data | Data |
+
+Present all structured data, metrics, recommendations, and comparisons in well-formatted markdown tables. Provide specific, actionable insights."""
 
 
 def get_comment_analysis_prompt(total_comments: int, sample_size: int, comments_text: str) -> str:
@@ -155,10 +190,12 @@ def get_comment_analysis_prompt(total_comments: int, sample_size: int, comments_
 
 {comments_text}
 
-Provide comprehensive comment analysis with these sections. **USE TABLES** for all structured data:
+Provide comprehensive comment analysis with these sections. **USE MARKDOWN TABLES** for all structured data.
+
+**IMPORTANT:** Use standard markdown table syntax (| and -) ONLY. DO NOT use ASCII box-drawing characters (+-----------+).
 
 ## Sentiment Analysis
-Present sentiment breakdown in table format:
+Present sentiment breakdown in markdown table format:
 
 | Sentiment Category | Count | Percentage | Sample Comments |
 |-------------------|-------|------------|-----------------|
@@ -206,9 +243,17 @@ Present recommendations in table format:
 
 **Format in markdown with:**
 - Clear headers
-- **Well-formatted tables** for all data
+- **Well-formatted MARKDOWN tables** (using | and - ONLY) for all data
+- DO NOT use ASCII box-drawing characters (+-----------+)
 - Proper alignment and visual clarity
 - Easy-to-scan structure for human readers"""
 
 
-COMMENT_ANALYSIS_SYSTEM_PROMPT = "You are a data analyst specializing in qualitative feedback analysis. Write a professional report suitable for management review. Use third-person perspective. **CRITICALLY IMPORTANT: Present all sentiment data, themes, concerns, and recommendations in well-formatted markdown tables. Tables must be properly aligned and easy to scan for human readers.** Provide objective analysis with specific insights."
+COMMENT_ANALYSIS_SYSTEM_PROMPT = """You are a data analyst specializing in qualitative feedback analysis. Write a professional report suitable for management review. Use third-person perspective.
+
+**CRITICALLY IMPORTANT TABLE FORMAT RULES:**
+1. Use ONLY standard markdown table syntax with pipes (|) and dashes (-)
+2. NEVER use ASCII box-drawing characters like +-----------+
+3. All tables must use format: | Column | Column |\n|--------|--------|\n| Data | Data |
+
+Present all sentiment data, themes, concerns, and recommendations in well-formatted markdown tables. Tables must be properly aligned and easy to scan for human readers. Provide objective analysis with specific insights."""

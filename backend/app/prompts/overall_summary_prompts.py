@@ -509,7 +509,16 @@ OVERALL_SUMMARY_SECTIONS = """
 """ + ENTERPRISE_MATURITY_ANALYSIS + """
 """
 
-OVERALL_SUMMARY_SYSTEM_PROMPT = OVERALL_SUMMARY_PROMPT_ADD_ON + "You are a **senior data management consultant** tasked with synthesizing insights across multiple data management dimensions. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format. **CRITICALLY IMPORTANT: Use well-formatted markdown tables extensively for all cross-dimension comparisons, action plans, risks, and metrics. Tables must be properly aligned, scannable, and visually appealing for human readers.** The analysis is based on survey responses with scores on a 1-10 scale."
+OVERALL_SUMMARY_SYSTEM_PROMPT = OVERALL_SUMMARY_PROMPT_ADD_ON + """You are a **senior data management consultant** tasked with synthesizing insights across multiple data management dimensions. Your output must be a professionally crafted, consultative, executive-ready report in PDF-friendly Markdown format.
+
+**CRITICALLY IMPORTANT TABLE FORMAT RULES:**
+1. Use ONLY standard markdown table syntax with pipes (|) and dashes (-)
+2. NEVER use ASCII box-drawing characters like +-----------+ or +-----+-----+
+3. NEVER use ASCII art or box art for tables
+4. Use this format ONLY: | Column | Column |\n|--------|--------|\n| Data | Data |
+5. All tables must be properly aligned, scannable, and visually appealing for human readers
+
+The analysis is based on survey responses with scores on a 1-10 scale."""
 
 
 def get_overall_summary_chunked_prompt(chunk_index: int, total_chunks: int, chunk_data: str) -> str:
@@ -526,7 +535,8 @@ def get_overall_summary_consolidation_prompt(chunk_summaries: list) -> str:
     for i, summary in enumerate(chunk_summaries):
         prompt += f"\n--- Analysis Part {i+1} ---\n{summary}\n"
 
-    prompt += "\n\nGenerate a professionally crafted, consultative, executive-ready report with the following sections:\n"
+    prompt += "\n\nGenerate a professionally crafted, consultative, executive-ready report with the following sections.\n"
+    prompt += "\n**IMPORTANT TABLE FORMAT:** Use ONLY standard markdown table syntax (| and -). DO NOT use ASCII box-drawing characters (+-----------+) or box art.\n\n"
     prompt += OVERALL_SUMMARY_SECTIONS
     return prompt
 
@@ -535,7 +545,8 @@ def get_overall_summary_single_prompt(all_summaries_text: str) -> str:
     """Generate prompt for single-pass overall summary"""
     prompt = "Analyze the following dimension summaries and provide an overall organizational data governance assessment:\n\n"
     prompt += all_summaries_text
-    prompt += "\n\nGenerate a professionally crafted, consultative, executive-ready report with the following sections. **USE TABLES EXTENSIVELY** for all data and comparisons:\n"
+    prompt += "\n\nGenerate a professionally crafted, consultative, executive-ready report with the following sections. **USE MARKDOWN TABLES EXTENSIVELY** for all data and comparisons.\n"
+    prompt += "\n**IMPORTANT TABLE FORMAT:** Use ONLY standard markdown table syntax (| and -). DO NOT use ASCII box-drawing characters (+-----------+) or box art.\n\n"
     prompt += """
 ### 1. Executive Summary
 - High-level overview across all dimensions
@@ -558,10 +569,19 @@ def get_overall_summary_single_prompt(all_summaries_text: str) -> str:
 
 **Format in markdown with:**
 - Clear headers and section breaks
-- **Extensive use of well-formatted tables** for all data
+- **Extensive use of well-formatted MARKDOWN tables** (using | and - ONLY) for all data
+- DO NOT use ASCII box-drawing characters (+-----------+)
 - Proper table alignment and spacing
 - Visual clarity for human readers"""
     return prompt
 
 
-CONSOLIDATION_SYSTEM_PROMPT = "You are a senior data governance consultant writing a professional executive report. Write in a formal, report-style format suitable for C-level executives. Use third-person perspective. Do NOT use first person (I, we) or ask questions. Do NOT include interactive elements or conversational language. **CRITICALLY IMPORTANT: Use well-formatted markdown tables extensively for all data, comparisons, and structured information. Tables must be properly aligned and visually clear for human readers.** Use markdown formatting."
+CONSOLIDATION_SYSTEM_PROMPT = """You are a senior data governance consultant writing a professional executive report. Write in a formal, report-style format suitable for C-level executives. Use third-person perspective. Do NOT use first person (I, we) or ask questions. Do NOT include interactive elements or conversational language.
+
+**CRITICALLY IMPORTANT TABLE FORMAT RULES:**
+1. Use ONLY standard markdown table syntax with pipes (|) and dashes (-)
+2. NEVER use ASCII box-drawing characters like +-----------+ or +-----+-----+
+3. NEVER use ASCII art or box art for tables
+4. Use this format ONLY: | Column | Column |\n|--------|--------|\n| Data | Data |
+
+Use well-formatted markdown tables extensively for all data, comparisons, and structured information. Tables must be properly aligned and visually clear for human readers."""

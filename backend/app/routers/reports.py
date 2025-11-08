@@ -427,6 +427,7 @@ async def get_dimension_report(
     # Generate dimension-level LLM analysis
     # Use asyncio.create_task to run LLM call in background - don't block the response
     dimension_llm_analysis = None
+    rag_context = None
     llm_error = None
 
     # Log LLM config status for debugging
@@ -460,6 +461,7 @@ async def get_dimension_report(
                 )
                 if llm_response.get("success"):
                     dimension_llm_analysis = llm_response.get("content")
+                    rag_context = llm_response.get("rag_context")  # Capture RAG context
                 else:
                     llm_error = llm_response.get("error")
                     logger.error(f"LLM analysis failed for dimension {dimension}: {llm_error}")
@@ -592,6 +594,9 @@ async def get_dimension_report(
         "process_llm_analyses": process_llm_analyses,
         "lifecycle_llm_analyses": lifecycle_llm_analyses,
 
+        # RAG context
+        "rag_context": rag_context,
+
         "llm_error": llm_error if llm_error else ("Orchestrate LLM not configured or test not successful" if not (llm_config and llm_config.status == "Success") else None)
     }
 
@@ -602,7 +607,7 @@ async def get_dimension_report(
             customer_name=customer.name,
             dimension=dimension,
             report_data=report_response,
-            rag_context=None  # TODO: Add RAG context if available
+            rag_context=rag_context  # Pass RAG context retrieved from LLM analysis
         )
         if save_result.get('error'):
             logger.warning(f"Report save had issues: {save_result['error']}")
@@ -828,7 +833,7 @@ async def get_overall_report(
             customer_name=customer.name,
             dimension="Overall",
             report_data=report_response,
-            rag_context=None  # TODO: Add RAG context if available
+            rag_context=None  # RAG context is dimension-specific, not applicable for overall report
         )
         if save_result.get('error'):
             logger.warning(f"Report save had issues: {save_result['error']}")

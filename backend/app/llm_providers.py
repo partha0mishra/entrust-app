@@ -24,7 +24,7 @@ class BaseLLMProvider(ABC):
 class LocalLLMProvider(BaseLLMProvider):
     """Provider for local LLMs (LM Studio, Ollama, etc.) using OpenAI-compatible API"""
 
-    def __init__(self, api_url: str, api_key: Optional[str] = None, model_name: str = "default", timeout: float = 180.0):
+    def __init__(self, api_url: str, api_key: Optional[str] = None, model_name: str = "default", timeout: float = 1800.0):
         self.api_url = api_url
         self.api_key = api_key
         self.model_name = model_name
@@ -90,7 +90,7 @@ class AWSBedrockProvider(BaseLLMProvider):
         access_key_id: str,
         secret_access_key: str,
         model_id: str,
-        timeout: float = 180.0,
+        timeout: float = 1800.0,
         thinking_mode: Optional[str] = None
     ):
         self.region = region
@@ -325,7 +325,7 @@ class AzureOpenAIProvider(BaseLLMProvider):
         api_key: str,
         deployment_name: str,
         api_version: str = "2024-02-15-preview",
-        timeout: float = 180.0,
+        timeout: float = 1800.0,
         reasoning_effort: Optional[str] = None
     ):
         self.endpoint = endpoint.rstrip('/')
