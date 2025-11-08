@@ -1,11 +1,25 @@
 import os
 import json
 import logging
+import traceback
 from datetime import datetime
 from typing import Dict, Optional, List
 from pathlib import Path
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles datetime, Decimal, and other non-serializable types"""
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        if isinstance(obj, Decimal):
+            return float(obj)
+        if hasattr(obj, '__dict__'):
+            return obj.__dict__
+        return super().default(obj)
 
 # Base path for reports - mounted at /app/entrust in Docker
 REPORTS_BASE_PATH = "/app/entrust"
@@ -346,14 +360,14 @@ def save_reports(
             "rag_context": rag_context
         }
 
-        # Save JSON
+        # Save JSON with custom encoder to handle datetime and other types
         with open(paths['json'], 'w', encoding='utf-8') as f:
-            json.dump(json_data, f, indent=2, ensure_ascii=False)
+            json.dump(json_data, f, indent=2, ensure_ascii=False, cls=DateTimeEncoder)
         result['json_path'] = paths['json']
         logger.info(f"Saved JSON report to {paths['json']}")
 
     except Exception as e:
-        logger.error(f"Error saving reports: {str(e)}")
+        logger.error(f"Error saving reports: {str(e)}\n{traceback.format_exc()}")
         result["error"] = str(e)
 
     return result

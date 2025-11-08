@@ -342,8 +342,52 @@ export default function Reports() {
 
           {selectedDimension === 'Overall' ? (
             <>
-              {/* Overall Summary */}
-              {report.overall_summary && (
+              {/* Section 1: Overall Metrics */}
+              {report.overall_metrics && (
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold mb-4">Overall Performance Overview</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg shadow-sm border border-green-200">
+                      <div className="text-3xl font-bold text-green-700">
+                        {report.overall_metrics.avg_score !== null ? report.overall_metrics.avg_score.toFixed(2) : 'N/A'}
+                      </div>
+                      <div className="text-sm text-gray-700 font-medium">Overall Avg Score</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg shadow-sm border border-blue-200">
+                      <div className="text-3xl font-bold text-blue-700">
+                        {report.overall_metrics.total_dimensions || 0}
+                      </div>
+                      <div className="text-sm text-gray-700 font-medium">Dimensions</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg shadow-sm border border-purple-200">
+                      <div className="text-3xl font-bold text-purple-700">
+                        {report.overall_metrics.total_questions || 0}
+                      </div>
+                      <div className="text-sm text-gray-700 font-medium">Total Questions</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg shadow-sm border border-orange-200">
+                      <div className="text-3xl font-bold text-orange-700">
+                        {report.overall_metrics.total_respondents || 0}/{report.overall_metrics.total_users || 0}
+                      </div>
+                      <div className="text-sm text-gray-700 font-medium">Respondents</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Section 2: Executive Summary / Main Analysis */}
+              {report.dimension_llm_analysis && (
+                <div className="mb-8">
+                  <LLMAnalysisDisplay
+                    content={report.dimension_llm_analysis}
+                    title="Executive Summary & Strategic Analysis"
+                    icon="📊"
+                  />
+                </div>
+              )}
+
+              {/* Show legacy overall_summary if dimension_llm_analysis not available */}
+              {!report.dimension_llm_analysis && report.overall_summary && (
                 <div className="mb-8 bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-lg border-2 border-purple-200">
                   <h3 className="text-lg font-bold mb-4 text-purple-800 flex items-center">
                     <span className="text-2xl mr-2">🤖</span>
@@ -360,98 +404,162 @@ export default function Reports() {
                 </div>
               )}
 
-              {/* Overall Error */}
-              {report.overall_error && (
+              {/* Error Display */}
+              {(report.llm_error || report.overall_error) && (
                 <div className="mb-8 bg-red-50 p-6 rounded-lg border-2 border-red-200">
                   <h3 className="text-lg font-bold mb-3 text-red-700 flex items-center">
                     <span className="text-2xl mr-2">⚠️</span>
                     LLM Analysis Error
                   </h3>
-                  <p className="text-red-600 mb-2">{report.overall_error}</p>
+                  <p className="text-red-600 mb-2">{report.llm_error || report.overall_error}</p>
                   <p className="text-sm text-gray-600">
-                    The dimension reports below are still available.
+                    The dimension data below is still available.
                   </p>
                 </div>
               )}
 
-              {/* Overall Statistics */}
-              {report.overall_stats && (
-                <div className="mb-8 bg-gray-50 p-6 rounded-lg border border-gray-200">
-                  <h3 className="text-xl font-bold mb-4">Survey Statistics</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-white p-4 rounded-lg shadow-sm">
-                      <div className="text-2xl font-bold text-encora-green">
-                        {report.overall_stats.total_questions}
-                      </div>
-                      <div className="text-sm text-gray-600">Total Questions</div>
-                    </div>
-                    <div className="bg-white p-4 rounded-lg shadow-sm">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {report.total_participants}
-                      </div>
-                      <div className="text-sm text-gray-600">Participants</div>
-                    </div>
-                    <div className="bg-white p-4 rounded-lg shadow-sm">
-                      <div className="text-2xl font-bold text-purple-600">
-                        {report.overall_stats.avg_score_overall.toFixed(2)}
-                      </div>
-                      <div className="text-sm text-gray-600">Average Score</div>
-                    </div>
-                    <div className="bg-white p-4 rounded-lg shadow-sm">
-                      <div className="text-2xl font-bold text-orange-600">
-                        {report.overall_stats.dimensions?.length || 0}
-                      </div>
-                      <div className="text-sm text-gray-600">Dimensions</div>
-                    </div>
+              {/* Section 3: Cross-Dimension Comparison */}
+              {report.dimension_comparison && report.dimension_comparison.length > 0 && (
+                <div className="mb-8 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-md page-break">
+                  <h3 className="text-xl font-bold mb-6 text-gray-900 flex items-center">
+                    <span className="text-2xl mr-2">📈</span>
+                    Cross-Dimension Performance Comparison
+                  </h3>
+
+                  {/* Comparison Table */}
+                  <div className="overflow-x-auto rounded-lg border border-gray-200">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Dimension
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Avg Score
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Min Score
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Max Score
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Questions
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Performance
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {report.dimension_comparison
+                          .sort((a, b) => b.avg_score - a.avg_score)
+                          .map((dim, index) => (
+                            <tr key={index} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 text-sm font-semibold text-gray-900">
+                                {dim.dimension}
+                              </td>
+                              <td className="px-6 py-4 text-sm font-medium">
+                                <span className={`inline-flex px-2 py-1 rounded ${
+                                  dim.avg_score >= 8 ? 'bg-green-100 text-green-800' :
+                                  dim.avg_score >= 6 ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {dim.avg_score.toFixed(2)}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-600">
+                                {dim.min_score.toFixed(2)}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-600">
+                                {dim.max_score.toFixed(2)}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-600">
+                                {dim.question_count}
+                              </td>
+                              <td className="px-6 py-4 text-sm">
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className={`h-2 rounded-full ${
+                                      dim.avg_score >= 8 ? 'bg-green-600' :
+                                      dim.avg_score >= 6 ? 'bg-yellow-600' :
+                                      'bg-red-600'
+                                    }`}
+                                    style={{ width: `${(dim.avg_score / 10) * 100}%` }}
+                                  ></div>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}
 
-              {/* Dimension Summaries */}
+              {/* Section 4: Dimension Summaries */}
               {report.dimension_summaries && Object.keys(report.dimension_summaries).length > 0 && (
-                <div className="space-y-6 mb-8">
-                  <h3 className="text-xl font-bold mb-4">Dimension Analysis</h3>
-                  {Object.entries(report.dimension_summaries).map(([dimension, summary]) => {
-                    const dimStats = report.overall_stats?.dimensions?.find(d => d.dimension === dimension);
-                    
-                    return (
-                      <div key={dimension} className="bg-gradient-to-r from-green-50 to-teal-50 p-6 rounded-lg border-2 border-green-200">
-                        <h4 className="text-lg font-bold mb-3 text-gray-900">{dimension}</h4>
-                        
-                        {dimStats && (
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4 text-sm">
-                            <div className="bg-white p-3 rounded shadow-sm">
-                              <span className="text-gray-600">Avg Score:</span>
-                              <span className="ml-2 font-bold text-encora-green">
-                                {dimStats.avg_score !== null ? dimStats.avg_score.toFixed(2) : 'N/A'}
+                <div className="mb-8 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-md page-break">
+                  <h3 className="text-xl font-bold mb-6 text-gray-900 flex items-center">
+                    <span className="text-2xl mr-2">📂</span>
+                    Dimension-Level Analysis
+                  </h3>
+                  <div className="space-y-6">
+                    {Object.entries(report.dimension_summaries).map(([dimension, summary]) => {
+                      const dimStats = report.overall_stats?.dimensions?.find(d => d.dimension === dimension);
+
+                      return (
+                        <details key={dimension} className="bg-green-50 border-2 border-green-300 rounded-lg accordion-section print-section-break">
+                          <summary className="cursor-pointer p-4 font-semibold text-green-900 hover:bg-green-100 transition print-heading flex items-center justify-between">
+                            <span>{dimension}</span>
+                            {dimStats && (
+                              <span className={`ml-4 px-3 py-1 rounded text-sm ${
+                                dimStats.avg_score >= 8 ? 'bg-green-200 text-green-900' :
+                                dimStats.avg_score >= 6 ? 'bg-yellow-200 text-yellow-900' :
+                                'bg-red-200 text-red-900'
+                              }`}>
+                                Score: {dimStats.avg_score.toFixed(2)}/10
                               </span>
-                            </div>
-                            <div className="bg-white p-3 rounded shadow-sm">
-                              <span className="text-gray-600">Min Score:</span>
-                              <span className="ml-2 font-bold text-orange-600">
-                                {dimStats.min_score !== null ? dimStats.min_score.toFixed(2) : 'N/A'}
-                              </span>
-                            </div>
-                            <div className="bg-white p-3 rounded shadow-sm">
-                              <span className="text-gray-600">Max Score:</span>
-                              <span className="ml-2 font-bold text-blue-600">
-                                {dimStats.max_score !== null ? dimStats.max_score.toFixed(2) : 'N/A'}
-                              </span>
+                            )}
+                          </summary>
+                          <div className="p-6 border-t-2 border-green-200 print-content">
+                            {dimStats && (
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-white p-3 rounded shadow-sm border border-gray-200">
+                                  <div className="text-xs text-gray-600 mb-1">Avg Score</div>
+                                  <div className="text-xl font-bold text-encora-green">
+                                    {dimStats.avg_score.toFixed(2)}
+                                  </div>
+                                </div>
+                                <div className="bg-white p-3 rounded shadow-sm border border-gray-200">
+                                  <div className="text-xs text-gray-600 mb-1">Min Score</div>
+                                  <div className="text-xl font-bold text-orange-600">
+                                    {dimStats.min_score.toFixed(2)}
+                                  </div>
+                                </div>
+                                <div className="bg-white p-3 rounded shadow-sm border border-gray-200">
+                                  <div className="text-xs text-gray-600 mb-1">Max Score</div>
+                                  <div className="text-xl font-bold text-blue-600">
+                                    {dimStats.max_score.toFixed(2)}
+                                  </div>
+                                </div>
+                                <div className="bg-white p-3 rounded shadow-sm border border-gray-200">
+                                  <div className="text-xs text-gray-600 mb-1">Questions</div>
+                                  <div className="text-xl font-bold text-purple-600">
+                                    {dimStats.question_count}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="bg-white p-6 rounded border border-gray-200">
+                              <LLMAnalysisDisplay content={summary} />
                             </div>
                           </div>
-                        )}
-
-                        <div className="prose prose-sm max-w-none text-gray-800 bg-white p-4 rounded">
-                          <ReactMarkdown 
-                            remarkPlugins={[remarkGfm]}
-                            components={markdownComponents}
-                          >
-                            {summary}
-                          </ReactMarkdown>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        </details>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
