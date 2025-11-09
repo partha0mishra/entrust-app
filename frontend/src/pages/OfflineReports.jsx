@@ -3,7 +3,7 @@ import { reportAPI } from '../api';
 import Breadcrumb from '../components/Breadcrumb';
 import DOMPurify from 'dompurify';
 
-// Dimension descriptions
+// Dimension descriptions - must match database dimension names exactly
 const DIMENSION_INFO = {
   'Data Privacy & Compliance': {
     description: 'Ensures personal and sensitive data is protected in accordance with legal and regulatory requirements.',
@@ -17,15 +17,15 @@ const DIMENSION_INFO = {
     description: 'Tracks the flow and transformation of data from origin to destination across systems.',
     color: 'green'
   },
-  'Value & Lifecycle': {
+  'Data Value & Lifecycle Management': {
     description: 'Assesses data value, relevance, and management throughout its entire lifecycle.',
     color: 'yellow'
   },
-  'Governance & Management': {
+  'Data Governance & Management': {
     description: 'Establishes policies, roles, and accountability for data stewardship and decision-making.',
     color: 'red'
   },
-  'Security & Access': {
+  'Data Security & Access': {
     description: 'Protects data from unauthorized access, breaches, and cyber threats.',
     color: 'indigo'
   },
@@ -33,7 +33,7 @@ const DIMENSION_INFO = {
     description: 'Provides comprehensive information about data structure, meaning, and context.',
     color: 'pink'
   },
-  'Quality': {
+  'Data Quality': {
     description: 'Ensures data accuracy, completeness, consistency, and fitness for intended use.',
     color: 'teal'
   },

@@ -12,15 +12,16 @@ logger = logging.getLogger(__name__)
 REPORTS_BASE_PATH = "/app/entrust"
 
 # Dimension mapping with underscores to avoid spaces
+# Maps actual dimension names from database to filename-safe format
 DIMENSION_MAP = {
-    "Privacy & Compliance": "privacy_compliance",
-    "Ethics & Bias": "ethics_bias",
-    "Lineage & Traceability": "lineage_traceability",
-    "Value & Lifecycle": "value_lifecycle",
-    "Governance & Management": "governance_management",
-    "Security & Access": "security_access",
+    "Data Privacy & Compliance": "privacy_compliance",
+    "Data Ethics & Bias": "ethics_bias",
+    "Data Lineage & Traceability": "lineage_traceability",
+    "Data Value & Lifecycle Management": "value_lifecycle",
+    "Data Governance & Management": "governance_management",
+    "Data Security & Access": "security_access",
     "Metadata & Documentation": "metadata_documentation",
-    "Quality": "quality",
+    "Data Quality": "quality",
     "Overall": "overall"
 }
 
