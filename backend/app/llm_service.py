@@ -357,14 +357,16 @@ Questions and Responses:
 
             return {
                 "success": True,
-                "content": content
+                "content": content,
+                "rag_context": rag_context  # Return RAG context for saving
             }
 
         except Exception as e:
             return {
                 "success": False,
                 "error": str(e),
-                "content": None
+                "content": None,
+                "rag_context": None
             }
 
     @staticmethod

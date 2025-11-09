@@ -1,19 +1,34 @@
 import os
 import json
 import logging
+import traceback
 from datetime import datetime
 from typing import Dict, Optional, List
 from pathlib import Path
 from .storage_service import StorageService
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles datetime, Decimal, and other non-serializable types"""
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        if isinstance(obj, Decimal):
+            return float(obj)
+        if hasattr(obj, '__dict__'):
+            return obj.__dict__
+        return super().default(obj)
 
 # Base path for reports - mounted at /app/entrust in Docker
 REPORTS_BASE_PATH = "/app/entrust"
 
 # Dimension mapping with underscores to avoid spaces
-# Maps actual dimension names from database to filename-safe format
+# Supports both with and without "Data" prefix
 DIMENSION_MAP = {
+    # With "Data" prefix (as stored in database)
     "Data Privacy & Compliance": "privacy_compliance",
     "Data Ethics & Bias": "ethics_bias",
     "Data Lineage & Traceability": "lineage_traceability",
@@ -22,6 +37,17 @@ DIMENSION_MAP = {
     "Data Security & Access": "security_access",
     "Metadata & Documentation": "metadata_documentation",
     "Data Quality": "quality",
+
+    # Without "Data" prefix (for backwards compatibility)
+    "Privacy & Compliance": "privacy_compliance",
+    "Ethics & Bias": "ethics_bias",
+    "Lineage & Traceability": "lineage_traceability",
+    "Value & Lifecycle": "value_lifecycle",
+    "Governance & Management": "governance_management",
+    "Security & Access": "security_access",
+    "Quality": "quality",
+
+    # Overall (no Data prefix)
     "Overall": "overall"
 }
 
@@ -1151,8 +1177,8 @@ def save_reports(
             "rag_context": rag_context
         }
 
-        # Save JSON
-        json_content = json.dumps(json_data, indent=2, ensure_ascii=False)
+        # Save JSON with custom encoder to handle datetime and other types
+        json_content = json.dumps(json_data, indent=2, ensure_ascii=False, cls=DateTimeEncoder)
         success, error = storage_service.save_file(paths['json'], json_content, 'application/json')
         if success:
             result['json_path'] = paths['json']
@@ -1167,7 +1193,7 @@ def save_reports(
             result["error"] = "Failed to save any report files"
 
     except Exception as e:
-        logger.error(f"Error saving reports: {str(e)}")
+        logger.error(f"Error saving reports: {str(e)}\n{traceback.format_exc()}")
         result["error"] = str(e)
 
     return result

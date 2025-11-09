@@ -427,6 +427,7 @@ async def get_dimension_report(
     # Generate dimension-level LLM analysis
     # Use asyncio.create_task to run LLM call in background - don't block the response
     dimension_llm_analysis = None
+    rag_context = None
     llm_error = None
 
     # Log LLM config status for debugging
@@ -460,6 +461,7 @@ async def get_dimension_report(
                 )
                 if llm_response.get("success"):
                     dimension_llm_analysis = llm_response.get("content")
+                    rag_context = llm_response.get("rag_context")  # Capture RAG context
                 else:
                     llm_error = llm_response.get("error")
                     logger.error(f"LLM analysis failed for dimension {dimension}: {llm_error}")
@@ -592,6 +594,9 @@ async def get_dimension_report(
         "process_llm_analyses": process_llm_analyses,
         "lifecycle_llm_analyses": lifecycle_llm_analyses,
 
+        # RAG context
+        "rag_context": rag_context,
+
         "llm_error": llm_error if llm_error else ("Orchestrate LLM not configured or test not successful" if not (llm_config and llm_config.status == "Success") else None)
     }
 
@@ -602,7 +607,7 @@ async def get_dimension_report(
             customer_name=customer.name,
             dimension=dimension,
             report_data=report_response,
-            rag_context=None,  # TODO: Add RAG context if available
+            rag_context=rag_context,  # Pass RAG context retrieved from LLM analysis
             customer=customer  # Pass customer for storage configuration
         )
         if save_result.get('error'):
@@ -810,16 +815,54 @@ async def get_overall_report(
         overall_error = str(e)
         logger.error(f"Exception generating overall summary: {str(e)}\n{traceback.format_exc()}")
     
-    # Prepare report data
+    # Aggregate dimension-level data for cross-dimension analysis
+    all_dimension_data = []
+    aggregated_rag_contexts = {}
+
+    for dim_data in overall_stats["dimensions"]:
+        if dim_data["avg_score"] is not None:
+            all_dimension_data.append({
+                "dimension": dim_data["dimension"],
+                "avg_score": dim_data["avg_score"],
+                "min_score": dim_data["min_score"],
+                "max_score": dim_data["max_score"],
+                "question_count": dim_data["question_count"]
+            })
+
+    # Prepare comprehensive report data (matching dimension report structure)
     report_response = {
+        "dimension": "Overall",
         "customer_code": customer.customer_code if customer else None,
         "customer_name": customer.name if customer else None,
         "survey_status": survey.status,
-        "submitted_at": survey.submitted_at,
+        "submitted_at": survey.submitted_at.isoformat() if survey.submitted_at else None,
         "total_participants": total_users,
+
+        # Overall metrics (similar to dimension reports)
+        "overall_metrics": {
+            "avg_score": overall_stats["avg_score_overall"],
+            "response_rate": f"{round((total_users / total_users * 100) if total_users > 0 else 0, 1)}%",
+            "total_responses": overall_stats["total_responses"],
+            "total_respondents": total_users,
+            "total_users": total_users,
+            "total_questions": overall_stats["total_questions"],
+            "total_dimensions": len(dimensions)
+        },
+
+        # Main analysis content
+        "overall_summary": overall_summary,
+        "dimension_llm_analysis": overall_summary,  # Use overall_summary as main analysis
+
+        # Dimension-level data for visualizations
         "overall_stats": overall_stats,
         "dimension_summaries": dimension_summaries,
-        "overall_summary": overall_summary,
+        "dimension_comparison": all_dimension_data,
+
+        # Aggregated RAG contexts from dimension analyses
+        "rag_context": aggregated_rag_contexts if aggregated_rag_contexts else None,
+
+        # Error tracking
+        "llm_error": overall_error,
         "overall_error": overall_error
     }
 
@@ -830,7 +873,7 @@ async def get_overall_report(
             customer_name=customer.name,
             dimension="Overall",
             report_data=report_response,
-            rag_context=None,  # TODO: Add RAG context if available
+            rag_context=None,  # RAG context is dimension-specific, not applicable for overall report
             customer=customer  # Pass customer for storage configuration
         )
         if save_result.get('error'):

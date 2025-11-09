@@ -72,7 +72,14 @@ class RAGService:
         # Initialize ChromaDB client
         try:
             logger.info(f"Initializing ChromaDB at: {self.chroma_persist_dir}")
-            self.client = chromadb.PersistentClient(path=self.chroma_persist_dir)
+            # Disable telemetry to prevent PostHog errors
+            self.client = chromadb.PersistentClient(
+                path=self.chroma_persist_dir,
+                settings=Settings(
+                    anonymized_telemetry=False,
+                    allow_reset=True
+                )
+            )
 
             # Get or create collection
             self.collection = self.client.get_or_create_collection(
