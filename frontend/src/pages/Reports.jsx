@@ -241,7 +241,7 @@ export default function Reports() {
         customerCode={customerCode}
       />
 
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 no-print">
         <h1 className="text-3xl font-bold">Reports</h1>
         <div className="flex items-center space-x-4">
           {(isSalesUser || isAdminUser) && customers.length > 0 && (
@@ -280,7 +280,7 @@ export default function Reports() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 no-print">
         <button
           onClick={() => loadOverallReport()}
           className="bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg shadow-md p-6 hover:shadow-lg transition text-left"
@@ -563,7 +563,7 @@ export default function Reports() {
                 </div>
               )}
 
-              <div className="mt-6 flex flex-wrap gap-4">
+              <div className="mt-6 flex flex-wrap gap-4 no-print">
                 <button
                   onClick={handleDownloadPDF}
                   className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center shadow-md hover:shadow-lg transition"
@@ -887,7 +887,7 @@ export default function Reports() {
                 </div>
               </div>
 
-              <div className="mt-6 flex flex-wrap gap-4">
+              <div className="mt-6 flex flex-wrap gap-4 no-print">
                 <button
                   onClick={handleDownloadPDF}
                   className="px-6 py-3 bg-encora-green text-white rounded-lg hover:bg-green-600 flex items-center shadow-md hover:shadow-lg transition"
@@ -901,7 +901,7 @@ export default function Reports() {
 
               {/* JSON Output Section */}
               {(report.final_json || report.json_content) && (
-                <div className="mt-8 border-t pt-6">
+                <div className="mt-8 border-t pt-6 no-print">
                   <button
                     onClick={() => setShowJson(!showJson)}
                     className="text-lg font-semibold text-gray-700 hover:text-encora-green flex items-center"

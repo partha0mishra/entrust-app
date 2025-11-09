@@ -25,15 +25,28 @@ class DateTimeEncoder(json.JSONEncoder):
 REPORTS_BASE_PATH = "/app/entrust"
 
 # Dimension mapping with underscores to avoid spaces
+# Supports both with and without "Data" prefix
 DIMENSION_MAP = {
+    # With "Data" prefix (as stored in database)
+    "Data Privacy & Compliance": "privacy_compliance",
+    "Data Ethics & Bias": "ethics_bias",
+    "Data Lineage & Traceability": "lineage_traceability",
+    "Data Value & Lifecycle Management": "value_lifecycle",
+    "Data Governance & Management": "governance_management",
+    "Data Security & Access": "security_access",
+    "Metadata & Documentation": "metadata_documentation",
+    "Data Quality": "quality",
+
+    # Without "Data" prefix (for backwards compatibility)
     "Privacy & Compliance": "privacy_compliance",
     "Ethics & Bias": "ethics_bias",
     "Lineage & Traceability": "lineage_traceability",
     "Value & Lifecycle": "value_lifecycle",
     "Governance & Management": "governance_management",
     "Security & Access": "security_access",
-    "Metadata & Documentation": "metadata_documentation",
     "Quality": "quality",
+
+    # Overall (no Data prefix)
     "Overall": "overall"
 }
 
