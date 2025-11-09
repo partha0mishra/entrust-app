@@ -68,7 +68,6 @@ services:
       - ./frontend:/app
       - ./backend:/backend
       - ./secrets.json:/secrets.json:ro
-      - ~/entrust:/app/entrust
       - /app/node_modules
     networks:
       - entrust_network
