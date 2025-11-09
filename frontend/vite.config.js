@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { resolve } from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -9,13 +10,23 @@ export default defineConfig({
     port: 3000,
     watch: {
       usePolling: true,
-      ignored: ['**/entrust/**', '**/enlora/**']
+      ignored: ['**/entrust/**', '**/enlora/**', '**/llama.cpp/**']
     },
     fs: {
-      strict: false
+      strict: false,
+      deny: ['/app/entrust']
     }
   },
   optimizeDeps: {
-    exclude: ['entrust', 'enlora']
+    exclude: ['entrust', 'enlora'],
+    entries: [
+      'src/**/*.{jsx,js,ts,tsx}',
+      'index.html'
+    ]
+  },
+  build: {
+    rollupOptions: {
+      external: [/\/entrust\//, /\/enlora\//]
+    }
   }
 })
