@@ -97,3 +97,4 @@ secrets.js
 # API Access documentation (contains secrets)
 api access/
 
+.DS_Store
