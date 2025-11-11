@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Training outputs
+data/
+adapters/
+models/
+checkpoints/
+runs/
+*.pth
+*.pt
+*.bin
+*.safetensors
+*.gguf
+
+# Logs
+*.log
+training_summary.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+tmp/
+temp/
