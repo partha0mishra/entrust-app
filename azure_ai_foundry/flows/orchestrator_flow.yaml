@@ -1,0 +1,163 @@
+# Orchestrator Flow
+# Top-level orchestration for complete survey analysis
+
+$schema: https://azuremlschemas.azureedge.net/promptflow/latest/Flow.schema.json
+name: orchestrator_flow
+display_name: "Survey Analysis Orchestrator"
+description: |
+  Top-level orchestrator that coordinates analysis of all 8 dimensions
+  plus overall synthesis. Enables parallel processing for efficiency.
+
+inputs:
+  survey_id:
+    type: integer
+    description: Survey database ID
+    required: true
+
+  customer_id:
+    type: integer
+    description: Customer database ID
+    required: true
+
+  force_regenerate:
+    type: boolean
+    description: Force regeneration, skip cache
+    default: false
+
+outputs:
+  dimension_reports:
+    type: array
+    description: All dimension reports
+    reference: ${dimension_analyses.outputs}
+
+  overall_report:
+    type: object
+    description: Overall synthesis report
+    reference: ${overall_synthesis.outputs}
+
+  status:
+    type: object
+    description: Execution status
+    value:
+      success: true
+      dimensions_completed: ${count(dimension_analyses.completed)}
+      total_dimensions: 8
+      overall_completed: ${overall_synthesis.completed}
+      execution_time: ${elapsed_time}
+
+nodes:
+  # Step 0: Load Survey Data from Database
+  - name: load_survey_data
+    type: python
+    source:
+      type: code
+      path: ../tools/data_loader.py
+      entry: load_survey_from_db
+    inputs:
+      survey_id: ${inputs.survey_id}
+      customer_id: ${inputs.customer_id}
+    outputs:
+      - survey_data
+      - customer_code
+      - customer_name
+      - survey_metadata
+
+  # Step 1: Analyze Each Dimension (Parallel Execution)
+  - name: dimension_analyses
+    type: parallel_for_each
+    source:
+      type: flow
+      path: dimension_analysis_flow.yaml
+    for_each: ${dimensions}
+    inputs:
+      survey_data: ${load_survey_data.survey_data}
+      dimension: ${item}
+      customer_code: ${load_survey_data.customer_code}
+      customer_name: ${load_survey_data.customer_name}
+      force_regenerate: ${inputs.force_regenerate}
+    max_parallelism: 8  # Process all dimensions in parallel
+    activate:
+      when: ${load_survey_data}
+      is: completed
+
+  # Define the 8 dimensions
+  dimensions:
+    - "Data Privacy & Compliance"
+    - "Data Quality"
+    - "Data Governance & Management"
+    - "Data Security & Access"
+    - "Data Lineage & Traceability"
+    - "Metadata & Documentation"
+    - "Data Value & Lifecycle Management"
+    - "Data Ethics & Bias"
+
+  # Step 2: Overall Synthesis
+  - name: overall_synthesis
+    type: flow
+    source:
+      type: flow
+      path: overall_synthesis_flow.yaml
+    inputs:
+      dimension_reports: ${dimension_analyses.outputs}
+      customer_code: ${load_survey_data.customer_code}
+      customer_name: ${load_survey_data.customer_name}
+      survey_metadata: ${load_survey_data.survey_metadata}
+    activate:
+      when: ${dimension_analyses}
+      is: all_completed
+
+  # Step 3: Notify Completion (Optional)
+  - name: notify_completion
+    type: python
+    source:
+      type: code
+      path: ../tools/notification_tools.py
+      entry: send_completion_notification
+    inputs:
+      customer_code: ${load_survey_data.customer_code}
+      status: ${outputs.status}
+    activate:
+      when: ${overall_synthesis}
+      is: completed
+
+environment:
+  python_requirements_txt: |
+    azure-ai-projects>=1.0.0
+    sqlalchemy>=2.0.0
+    psycopg2-binary>=2.9.0
+
+connection:
+  type: azure_ai_projects
+  api_version: "2024-07-01"
+
+runtime:
+  flow_type: standard
+  runtime_version: "1.0"
+
+settings:
+  timeout: 3600  # 60 minutes for full survey analysis
+  retry_policy:
+    max_attempts: 1  # Don't retry full orchestration
+    backoff_multiplier: 1.0
+
+  observability:
+    tracing: enabled
+    logging_level: info
+    export_traces_to: azure_monitor
+
+  performance:
+    enable_parallel_execution: true
+    max_parallel_flows: 8
+
+metadata:
+  version: "1.0.0"
+  author: "Entrust Migration Team"
+  created: "2025-11-13"
+  tags:
+    - orchestrator
+    - full_survey_analysis
+    - parallel_processing
+  expected_duration:
+    dimensions: "10-30 minutes each (parallel)"
+    overall: "10-20 minutes"
+    total: "30-40 minutes (with parallelism)"

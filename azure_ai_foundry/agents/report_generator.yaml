@@ -1,0 +1,309 @@
+# Report Generator Agent Definition
+# Synthesizes comprehensive, action-oriented reports from analysis results
+
+name: report_generator_agent
+description: |
+  Generates comprehensive 50+ page data governance reports with executive summaries,
+  detailed analysis, maturity assessments, visualizations, action items, and roadmaps.
+  Professional, action-oriented output aligned with industry standards.
+
+model:
+  type: azure_openai
+  deployment: gpt-4o
+  temperature: 0.7
+  max_tokens: 16000
+
+system_prompt: |
+  You are a senior data governance consultant authoring comprehensive assessment reports.
+  Your reports are:
+
+  - **Professional**: Executive-ready, formal tone, clear structure
+  - **Detailed**: 50+ pages with deep analysis of all facets
+  - **Action-Oriented**: Specific, prioritized recommendations with timelines
+  - **Standards-Based**: Grounded in GDPR, DAMA-DMBOK, NIST, ISO 8000
+  - **Multi-Faceted**: Cover categories, processes, lifecycle stages
+  - **Visual**: Include graph descriptions, tables, word clouds
+
+  Report Structure:
+
+  1. **Executive Summary** (2-3 pages)
+     - Key findings and overall maturity level
+     - Critical action items
+     - Strategic recommendations
+
+  2. **Current State Assessment** (5-10 pages)
+     - Survey methodology and participation
+     - Overall metrics and score distribution
+     - Category/Process/Lifecycle breakdown
+     - Key themes from comments
+
+  3. **Maturity Analysis** (10-15 pages)
+     - Detailed maturity assessment per standard
+     - Gap analysis with severity ratings
+     - Benchmark comparisons
+     - Strengths and weaknesses
+
+  4. **Detailed Findings** (20-30 pages)
+     - Category-level deep dives
+     - Process-specific insights
+     - Lifecycle stage analysis
+     - Risk areas and vulnerabilities
+
+  5. **Visualizations & Data** (5-10 pages)
+     - Score distribution charts
+     - Dimension comparison radar charts
+     - Category/Process heatmaps
+     - Word clouds from comments
+     - Trend analysis graphs
+
+  6. **Action Items** (5-10 pages)
+     - Prioritized by risk/impact matrix
+     - Specific, measurable actions
+     - Assigned owners and timelines
+     - Resource requirements
+     - Success metrics
+
+  7. **Roadmap** (5-10 pages)
+     - 6-12 month implementation plan
+     - Phased approach (Quick Wins, Short-Term, Long-Term)
+     - Milestones and checkpoints
+     - Dependencies and sequencing
+
+  Use markdown formatting with proper headers, tables, lists, and emphasis.
+  Reference standards explicitly throughout the report.
+
+  Output Format: Markdown document
+
+inputs:
+  - name: statistics
+    type: object
+    description: Survey statistics from Survey Parser Agent
+    required: true
+
+  - name: maturity_assessment
+    type: object
+    description: Maturity assessment from Maturity Assessor Agent
+    required: true
+
+  - name: dimension
+    type: string
+    description: The data dimension being reported
+    required: true
+
+  - name: customer_name
+    type: string
+    description: Customer organization name
+    required: true
+
+  - name: standards_context
+    type: string
+    description: Standards context from RAG
+    required: false
+
+outputs:
+  - name: report_markdown
+    type: string
+    description: Complete report in markdown format
+
+  - name: visualizations
+    type: array
+    description: List of visualization specifications
+
+  - name: metadata
+    type: object
+    description: Report metadata (word count, sections, etc.)
+
+tools:
+  - generate_score_distribution_chart
+  - generate_dimension_comparison_radar
+  - generate_word_cloud
+  - generate_category_heatmap
+
+reasoning_mode: chain_of_thought
+
+report_template: |
+  # {{ dimension }} Assessment Report
+  ## {{ customer_name }}
+
+  **Report Date:** {{ current_date }}
+  **Maturity Level:** {{ maturity_level }} - {{ maturity_label }}
+  **Overall Score:** {{ overall_score }}/10
+
+  ---
+
+  ## Executive Summary
+
+  This comprehensive assessment evaluates {{ customer_name }}'s maturity in {{ dimension }}.
+  Based on survey data from {{ total_respondents }} participants ({{ response_rate }} response rate),
+  the organization demonstrates a **{{ maturity_label }}** maturity level (Level {{ maturity_level }}/5).
+
+  ### Key Findings
+
+  {{ key_findings }}
+
+  ### Critical Action Items
+
+  {{ critical_actions }}
+
+  ### Strategic Recommendations
+
+  {{ strategic_recommendations }}
+
+  ---
+
+  ## 1. Current State Assessment
+
+  ### 1.1 Survey Overview
+
+  - **Survey Period:** {{ survey_period }}
+  - **Total Participants:** {{ total_respondents }}
+  - **Response Rate:** {{ response_rate }}
+  - **Average Score:** {{ overall_score }}/10
+  - **Score Range:** {{ min_score }} - {{ max_score }}
+
+  ### 1.2 Score Distribution
+
+  {{ score_distribution_analysis }}
+
+  ![Score Distribution]({{ score_distribution_chart }})
+
+  ### 1.3 Multi-Faceted Breakdown
+
+  #### By Category
+  {{ category_analysis }}
+
+  #### By Process
+  {{ process_analysis }}
+
+  #### By Lifecycle Stage
+  {{ lifecycle_analysis }}
+
+  ### 1.4 Key Themes from Comments
+
+  {{ comment_themes }}
+
+  ![Word Cloud]({{ word_cloud_chart }})
+
+  ---
+
+  ## 2. Maturity Analysis
+
+  ### 2.1 Maturity Level Assessment
+
+  **Current Level:** {{ maturity_level }} - {{ maturity_label }}
+
+  {{ maturity_description }}
+
+  ### 2.2 Standards Alignment
+
+  #### {{ standard_1 }}
+  {{ standard_1_compliance }}
+
+  #### {{ standard_2 }}
+  {{ standard_2_compliance }}
+
+  ### 2.3 Gap Analysis
+
+  {{ gap_analysis }}
+
+  ### 2.4 Benchmark Comparison
+
+  {{ benchmark_comparison }}
+
+  ### 2.5 Strengths and Weaknesses
+
+  **Strengths:**
+  {{ strengths }}
+
+  **Weaknesses:**
+  {{ weaknesses }}
+
+  ---
+
+  ## 3. Detailed Findings
+
+  {{ detailed_findings }}
+
+  ---
+
+  ## 4. Visualizations & Data
+
+  {{ visualizations }}
+
+  ---
+
+  ## 5. Prioritized Action Items
+
+  ### 5.1 Critical Priority (Immediate - 0-3 months)
+
+  {{ critical_actions }}
+
+  ### 5.2 High Priority (Short-Term - 3-6 months)
+
+  {{ high_priority_actions }}
+
+  ### 5.3 Medium Priority (Mid-Term - 6-12 months)
+
+  {{ medium_priority_actions }}
+
+  ---
+
+  ## 6. Implementation Roadmap
+
+  ### Phase 1: Quick Wins (0-3 months)
+  {{ phase_1 }}
+
+  ### Phase 2: Foundation Building (3-6 months)
+  {{ phase_2 }}
+
+  ### Phase 3: Maturity Advancement (6-12 months)
+  {{ phase_3 }}
+
+  ---
+
+  ## 7. Conclusion
+
+  {{ conclusion }}
+
+  ---
+
+  ## Appendices
+
+  ### Appendix A: Survey Questions
+  {{ survey_questions }}
+
+  ### Appendix B: Standards References
+  {{ standards_references }}
+
+  ### Appendix C: Glossary
+  {{ glossary }}
+
+examples:
+  - input:
+      dimension: "Data Privacy & Compliance"
+      customer_name: "Acme Corp"
+      statistics:
+        overall_metrics:
+          avg_score: 7.2
+      maturity_assessment:
+        maturity_level: 3
+        maturity_label: "Defined"
+    output_excerpt: |
+      # Data Privacy & Compliance Assessment Report
+      ## Acme Corp
+
+      **Maturity Level:** 3 - Defined
+      **Overall Score:** 7.2/10
+
+      ## Executive Summary
+
+      Acme Corp demonstrates a **Defined** maturity level (Level 3/5) in Data Privacy & Compliance...
+
+metadata:
+  version: "1.0"
+  author: "Entrust Migration Team"
+  created: "2025-11-13"
+  tags:
+    - report_generation
+    - comprehensive_analysis
+    - action_oriented

@@ -1,0 +1,216 @@
+# Dimension Analysis Flow
+# Orchestrates agents to generate comprehensive dimension reports
+
+$schema: https://azuremlschemas.azureedge.net/promptflow/latest/Flow.schema.json
+name: dimension_analysis_flow
+display_name: "Dimension Analysis Flow"
+description: |
+  Complete flow for analyzing a single data dimension.
+  Orchestrates Survey Parser, Maturity Assessor, Report Generator,
+  Self-Critic, and PDF Formatter agents.
+
+inputs:
+  survey_data:
+    type: object
+    description: Survey data JSON with questions, scores, comments
+    required: true
+
+  dimension:
+    type: string
+    description: Data dimension name (e.g., "Data Privacy & Compliance")
+    required: true
+
+  customer_code:
+    type: string
+    description: Customer identifier
+    required: true
+
+  customer_name:
+    type: string
+    description: Customer organization name
+    required: true
+
+  force_regenerate:
+    type: boolean
+    description: Skip cached results
+    default: false
+
+outputs:
+  final_report:
+    type: string
+    description: Final markdown report
+    reference: ${self_critic.revised_report}
+
+  pdf_report:
+    type: binary
+    description: PDF version of report
+    reference: ${pdf_formatter.pdf_binary}
+
+  metadata:
+    type: object
+    description: Report metadata
+    value:
+      dimension: ${inputs.dimension}
+      customer_code: ${inputs.customer_code}
+      maturity_level: ${maturity_assessor.maturity_level}
+      quality_score: ${self_critic.quality_score}
+      page_count: ${pdf_formatter.page_count}
+      generation_time: ${current_timestamp}
+
+  rag_context:
+    type: string
+    description: Retrieved standards context
+    reference: ${maturity_assessor.standards_context}
+
+nodes:
+  # Step 1: Parse Survey Data and Extract Statistics
+  - name: survey_parser
+    type: llm
+    source:
+      type: agent
+      path: ../agents/survey_parser.yaml
+    inputs:
+      survey_data: ${inputs.survey_data}
+      dimension: ${inputs.dimension}
+    tools:
+      - compute_survey_statistics
+      - identify_risk_areas
+    activate:
+      when: ${inputs}
+      is: not_empty
+
+  # Step 2: Assess Maturity Against Standards
+  - name: maturity_assessor
+    type: llm
+    source:
+      type: agent
+      path: ../agents/maturity_assessor.yaml
+    inputs:
+      statistics: ${survey_parser.statistics}
+      dimension: ${inputs.dimension}
+    tools:
+      - query_rag_standards
+      - compute_maturity_score
+    activate:
+      when: ${survey_parser}
+      is: completed
+
+  # Step 3: Generate Comprehensive Report
+  - name: report_generator
+    type: llm
+    source:
+      type: agent
+      path: ../agents/report_generator.yaml
+    inputs:
+      statistics: ${survey_parser.statistics}
+      maturity_assessment: ${maturity_assessor.assessment}
+      dimension: ${inputs.dimension}
+      customer_name: ${inputs.customer_name}
+      standards_context: ${maturity_assessor.standards_context}
+    tools:
+      - generate_score_distribution_chart
+      - generate_dimension_comparison_radar
+      - generate_word_cloud
+      - generate_category_heatmap
+    activate:
+      when: ${maturity_assessor}
+      is: completed
+
+  # Step 4: Quality Assurance and Refinement
+  - name: self_critic
+    type: llm
+    source:
+      type: agent
+      path: ../agents/self_critic.yaml
+    inputs:
+      report_markdown: ${report_generator.report_markdown}
+      survey_data: ${inputs.survey_data}
+      maturity_assessment: ${maturity_assessor.assessment}
+    activate:
+      when: ${report_generator}
+      is: completed
+
+  # Step 5: Convert to PDF
+  - name: pdf_formatter
+    type: llm
+    source:
+      type: agent
+      path: ../agents/pdf_formatter.yaml
+    inputs:
+      report_markdown: ${self_critic.revised_report}
+      metadata:
+        customer_name: ${inputs.customer_name}
+        dimension: ${inputs.dimension}
+        date: ${current_date}
+    tools:
+      - convert_markdown_to_pdf
+    activate:
+      when: ${self_critic.approval_status}
+      is: Approved
+      or: ${self_critic.approval_status}
+      is: "Needs Minor Revisions"
+
+  # Optional: Save Reports to Storage
+  - name: save_reports
+    type: python
+    source:
+      type: code
+      path: ../tools/storage_tools.py
+    inputs:
+      customer_code: ${inputs.customer_code}
+      dimension: ${inputs.dimension}
+      markdown_report: ${self_critic.revised_report}
+      pdf_report: ${pdf_formatter.pdf_binary}
+      metadata: ${outputs.metadata}
+    activate:
+      when: ${pdf_formatter}
+      is: completed
+
+environment:
+  python_requirements_txt: |
+    azure-ai-projects>=1.0.0
+    chromadb>=0.4.0
+    sentence-transformers>=2.2.0
+    matplotlib>=3.7.0
+    plotly>=5.14.0
+    wordcloud>=1.9.0
+    weasyprint>=59.0
+
+connection:
+  type: azure_ai_projects
+  api_version: "2024-07-01"
+
+runtime:
+  flow_type: standard
+  runtime_version: "1.0"
+
+settings:
+  timeout: 1800  # 30 minutes
+  retry_policy:
+    max_attempts: 2
+    backoff_multiplier: 2.0
+    initial_delay: 5.0
+
+  observability:
+    tracing: enabled
+    logging_level: info
+    export_traces_to: azure_monitor
+
+  cost_optimization:
+    cache_rag_queries: true
+    cache_ttl: 3600  # 1 hour
+
+metadata:
+  version: "1.0.0"
+  author: "Entrust Migration Team"
+  created: "2025-11-13"
+  tags:
+    - dimension_analysis
+    - survey_report
+    - agentic_workflow
+  model_requirements:
+    survey_parser: gpt-4o
+    maturity_assessor: gpt-4o
+    report_generator: gpt-4o
+    self_critic: gpt-4o
+    pdf_formatter: gpt-4o-mini

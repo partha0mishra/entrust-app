@@ -1,0 +1,125 @@
+# Survey Parser Agent Definition
+# Analyzes survey JSON data, computes statistics, and extracts themes
+
+name: survey_parser_agent
+description: |
+  Analyzes survey JSON data to compute comprehensive statistics and extract key themes.
+  This agent is the first step in the dimension analysis workflow.
+
+model:
+  type: azure_openai
+  deployment: gpt-4o
+  temperature: 0.3
+  max_tokens: 4000
+
+system_prompt: |
+  You are a data analyst specializing in survey data analysis. Your role is to:
+
+  1. Parse JSON survey data containing questions, scores (1-10 scale), and comments
+  2. Compute comprehensive statistics (averages, distributions, trends)
+  3. Extract key themes from qualitative comments
+  4. Identify patterns and anomalies in the data
+  5. Prepare structured output for downstream agents
+
+  Use Chain-of-Thought reasoning to break down your analysis into clear steps.
+
+  Output Format:
+  Provide your analysis as a JSON object with the following structure:
+  ```json
+  {
+    "overall_metrics": {
+      "avg_score": float,
+      "min_score": float,
+      "max_score": float,
+      "response_rate": float,
+      "total_responses": int
+    },
+    "score_distribution": {
+      "high": {"count": int, "percentage": float},
+      "medium": {"count": int, "percentage": float},
+      "low": {"count": int, "percentage": float}
+    },
+    "category_breakdown": {
+      "category_name": {"avg_score": float, "count": int}
+    },
+    "process_breakdown": {
+      "process_name": {"avg_score": float, "count": int}
+    },
+    "lifecycle_breakdown": {
+      "stage_name": {"avg_score": float, "count": int}
+    },
+    "key_themes": [
+      {"theme": str, "frequency": int, "sentiment": str}
+    ],
+    "risk_areas": [
+      {"area": str, "avg_score": float, "reason": str}
+    ]
+  }
+  ```
+
+inputs:
+  - name: survey_data
+    type: object
+    description: |
+      Survey data JSON containing:
+      - questions: List of question objects with text, scores, comments
+      - dimension: The data dimension being analyzed
+      - metadata: Customer, survey info
+    required: true
+
+  - name: dimension
+    type: string
+    description: The data dimension being analyzed (e.g., "Data Privacy & Compliance")
+    required: true
+
+outputs:
+  - name: statistics
+    type: object
+    description: Comprehensive statistical analysis of survey data
+
+  - name: themes
+    type: array
+    description: Key themes extracted from comments
+
+  - name: risk_areas
+    type: array
+    description: Areas requiring immediate attention (low scores)
+
+tools:
+  - compute_survey_statistics
+  - identify_risk_areas
+
+reasoning_mode: chain_of_thought
+
+examples:
+  - input:
+      survey_data:
+        questions:
+          - text: "Does your organization have a formal data privacy policy?"
+            avg_score: 7.5
+            comments: ["We have a policy but it needs updating", "Policy exists but not well communicated"]
+            category: "Policy & Governance"
+            process: "Policy Management"
+            lifecycle_stage: "Planning"
+      dimension: "Data Privacy & Compliance"
+    output:
+      statistics:
+        overall_metrics:
+          avg_score: 7.5
+          response_rate: 0.85
+        category_breakdown:
+          "Policy & Governance": {"avg_score": 7.5, "count": 1}
+      themes:
+        - theme: "Policy exists but needs improvement"
+          frequency: 2
+          sentiment: "neutral"
+      risk_areas: []
+
+metadata:
+  version: "1.0"
+  author: "Entrust Migration Team"
+  created: "2025-11-13"
+  tags:
+    - survey_analysis
+    - statistics
+    - data_parsing

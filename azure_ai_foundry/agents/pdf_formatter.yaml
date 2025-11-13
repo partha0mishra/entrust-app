@@ -1,0 +1,158 @@
+# PDF Formatter Agent Definition
+# Converts markdown reports to professional PDF format
+
+name: pdf_formatter_agent
+description: |
+  Converts markdown reports to professionally styled PDF documents with
+  branding, table of contents, page numbers, and proper formatting.
+
+model:
+  type: azure_openai
+  deployment: gpt-4o-mini  # Smaller model for simple formatting tasks
+  temperature: 0.1
+  max_tokens: 2000
+
+system_prompt: |
+  You are a document formatting specialist. Your role is to:
+
+  1. Prepare markdown for PDF conversion
+  2. Add PDF-specific metadata (title, author, date)
+  3. Generate table of contents
+  4. Configure styling (fonts, colors, spacing)
+  5. Ensure proper page breaks
+  6. Add headers/footers with page numbers
+  7. Validate output quality
+
+  Output Format:
+  Provide formatting instructions as a JSON object:
+  ```json
+  {
+    "title": str,
+    "subtitle": str,
+    "author": str,
+    "date": str,
+    "toc": {
+      "enabled": bool,
+      "depth": int
+    },
+    "styling": {
+      "font_family": str,
+      "font_size": int,
+      "line_spacing": float,
+      "page_margins": {"top": str, "bottom": str, "left": str, "right": str}
+    },
+    "header": {
+      "content": str,
+      "alignment": str
+    },
+    "footer": {
+      "content": str,
+      "page_numbers": bool,
+      "alignment": str
+    },
+    "branding": {
+      "logo_path": str,
+      "color_scheme": str
+    },
+    "page_breaks": [
+      {"before_section": str}
+    ]
+  }
+  ```
+
+inputs:
+  - name: report_markdown
+    type: string
+    description: Final approved report in markdown
+    required: true
+
+  - name: metadata
+    type: object
+    description: Report metadata (customer, dimension, date)
+    required: true
+
+outputs:
+  - name: pdf_binary
+    type: binary
+    description: PDF file bytes
+
+  - name: formatting_config
+    type: object
+    description: PDF formatting configuration used
+
+  - name: page_count
+    type: integer
+    description: Number of pages in PDF
+
+tools:
+  - convert_markdown_to_pdf
+
+reasoning_mode: direct  # Simple task, no need for CoT
+
+pdf_configuration:
+  default_styling:
+    font_family: "Helvetica"
+    font_size: 11
+    line_spacing: 1.5
+    page_margins:
+      top: "2.5cm"
+      bottom: "2.5cm"
+      left: "2.5cm"
+      right: "2.5cm"
+
+  header:
+    content: "{{ customer_name }} - {{ dimension }} Assessment"
+    alignment: "left"
+    font_size: 9
+
+  footer:
+    content: "Confidential - {{ current_date }}"
+    page_numbers: true
+    alignment: "center"
+    font_size: 9
+
+  toc:
+    enabled: true
+    depth: 3
+    title: "Table of Contents"
+
+  branding:
+    logo_path: "assets/entrust_logo.png"
+    color_scheme: "professional_blue"
+    primary_color: "#003366"
+    secondary_color: "#0066CC"
+
+  page_breaks:
+    - before_section: "Executive Summary"
+    - before_section: "Current State Assessment"
+    - before_section: "Maturity Analysis"
+    - before_section: "Detailed Findings"
+    - before_section: "Action Items"
+    - before_section: "Roadmap"
+
+examples:
+  - input:
+      report_markdown: |
+        # Data Privacy Report
+        ## Executive Summary
+        ...
+      metadata:
+        customer_name: "Acme Corp"
+        dimension: "Data Privacy & Compliance"
+        date: "2025-11-13"
+    output:
+      formatting_config:
+        title: "Data Privacy & Compliance Assessment"
+        subtitle: "Acme Corp"
+        date: "2025-11-13"
+        page_breaks:
+          - before_section: "Executive Summary"
+
+metadata:
+  version: "1.0"
+  author: "Entrust Migration Team"
+  created: "2025-11-13"
+  tags:
+    - pdf_conversion
+    - document_formatting
+    - report_styling

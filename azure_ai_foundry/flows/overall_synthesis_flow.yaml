@@ -1,0 +1,200 @@
+# Overall Synthesis Flow
+# Synthesizes cross-dimension summary report from individual dimension reports
+
+$schema: https://azuremlschemas.azureedge.net/promptflow/latest/Flow.schema.json
+name: overall_synthesis_flow
+display_name: "Overall Synthesis Flow"
+description: |
+  Generates comprehensive overall summary by synthesizing insights
+  from all 8 dimension reports. Provides executive-level view of
+  organizational data governance maturity.
+
+inputs:
+  dimension_reports:
+    type: array
+    description: List of dimension report objects
+    required: true
+
+  customer_code:
+    type: string
+    description: Customer identifier
+    required: true
+
+  customer_name:
+    type: string
+    description: Customer organization name
+    required: true
+
+  survey_metadata:
+    type: object
+    description: Survey metadata (dates, participants, etc.)
+    required: true
+
+outputs:
+  final_report:
+    type: string
+    description: Final overall markdown report
+    reference: ${self_critic.revised_report}
+
+  pdf_report:
+    type: binary
+    description: PDF version of overall report
+    reference: ${pdf_formatter.pdf_binary}
+
+  executive_summary:
+    type: string
+    description: Executive summary extract
+    reference: ${report_generator.executive_summary}
+
+  metadata:
+    type: object
+    description: Report metadata
+    value:
+      customer_code: ${inputs.customer_code}
+      total_dimensions: ${count(inputs.dimension_reports)}
+      avg_maturity_level: ${aggregator.avg_maturity}
+      quality_score: ${self_critic.quality_score}
+      generation_time: ${current_timestamp}
+
+nodes:
+  # Step 1: Aggregate Dimension Insights
+  - name: aggregator
+    type: python
+    source:
+      type: code
+      path: ../tools/aggregation_tools.py
+      entry: aggregate_dimension_reports
+    inputs:
+      dimension_reports: ${inputs.dimension_reports}
+    outputs:
+      - avg_maturity
+      - dimension_comparison
+      - cross_cutting_themes
+      - overall_strengths
+      - overall_weaknesses
+      - strategic_priorities
+
+  # Step 2: Generate Cross-Dimension Analysis
+  - name: cross_dimension_analyzer
+    type: llm
+    source:
+      type: agent
+      path: ../agents/report_generator.yaml
+    prompt_template: ../prompts/overall_summary.jinja
+    inputs:
+      dimension_reports: ${inputs.dimension_reports}
+      aggregated_insights: ${aggregator}
+      customer_name: ${inputs.customer_name}
+      survey_metadata: ${inputs.survey_metadata}
+    tools:
+      - generate_dimension_comparison_radar
+      - generate_maturity_heatmap
+      - generate_strategic_roadmap_chart
+    activate:
+      when: ${aggregator}
+      is: completed
+
+  # Step 3: Generate Overall Report
+  - name: report_generator
+    type: llm
+    source:
+      type: agent
+      path: ../agents/report_generator.yaml
+    prompt_template: ../prompts/overall_report_template.jinja
+    inputs:
+      dimension_reports: ${inputs.dimension_reports}
+      cross_dimension_analysis: ${cross_dimension_analyzer.analysis}
+      aggregated_insights: ${aggregator}
+      customer_name: ${inputs.customer_name}
+      survey_metadata: ${inputs.survey_metadata}
+    tools:
+      - generate_dimension_comparison_radar
+      - generate_maturity_heatmap
+    activate:
+      when: ${cross_dimension_analyzer}
+      is: completed
+
+  # Step 4: Quality Review
+  - name: self_critic
+    type: llm
+    source:
+      type: agent
+      path: ../agents/self_critic.yaml
+    inputs:
+      report_markdown: ${report_generator.report_markdown}
+      survey_data: ${inputs.survey_metadata}
+      dimension_count: ${count(inputs.dimension_reports)}
+    activate:
+      when: ${report_generator}
+      is: completed
+
+  # Step 5: Convert to PDF
+  - name: pdf_formatter
+    type: llm
+    source:
+      type: agent
+      path: ../agents/pdf_formatter.yaml
+    inputs:
+      report_markdown: ${self_critic.revised_report}
+      metadata:
+        customer_name: ${inputs.customer_name}
+        dimension: "Overall Data Governance Maturity"
+        date: ${current_date}
+    tools:
+      - convert_markdown_to_pdf
+    activate:
+      when: ${self_critic.approval_status}
+      is: Approved
+      or: ${self_critic.approval_status}
+      is: "Needs Minor Revisions"
+
+  # Step 6: Save Reports
+  - name: save_reports
+    type: python
+    source:
+      type: code
+      path: ../tools/storage_tools.py
+    inputs:
+      customer_code: ${inputs.customer_code}
+      dimension: "Overall"
+      markdown_report: ${self_critic.revised_report}
+      pdf_report: ${pdf_formatter.pdf_binary}
+      metadata: ${outputs.metadata}
+    activate:
+      when: ${pdf_formatter}
+      is: completed
+
+environment:
+  python_requirements_txt: |
+    azure-ai-projects>=1.0.0
+    matplotlib>=3.7.0
+    plotly>=5.14.0
+
+connection:
+  type: azure_ai_projects
+  api_version: "2024-07-01"
+
+runtime:
+  flow_type: standard
+  runtime_version: "1.0"
+
+settings:
+  timeout: 1200  # 20 minutes
+  retry_policy:
+    max_attempts: 2
+    backoff_multiplier: 2.0
+    initial_delay: 5.0
+
+  observability:
+    tracing: enabled
+    logging_level: info
+    export_traces_to: azure_monitor
+
+metadata:
+  version: "1.0.0"
+  author: "Entrust Migration Team"
+  created: "2025-11-13"
+  tags:
+    - overall_synthesis
+    - cross_dimension_analysis
+    - executive_summary

@@ -1,0 +1,168 @@
+# Self-Critic Agent Definition
+# Quality assurance and report refinement
+
+name: self_critic_agent
+description: |
+  Evaluates report quality, identifies gaps, and suggests improvements.
+  Ensures reports are complete, accurate, and aligned with standards.
+
+model:
+  type: azure_openai
+  deployment: gpt-4o
+  temperature: 0.3
+  max_tokens: 4000
+
+system_prompt: |
+  You are a senior quality assurance reviewer for data governance reports.
+  Your role is to:
+
+  1. Evaluate report completeness (all required sections present)
+  2. Verify accuracy (findings match survey data)
+  3. Check standards alignment (proper references to GDPR, DAMA, NIST, ISO)
+  4. Assess actionability (recommendations are specific and prioritized)
+  5. Review professionalism (tone, formatting, clarity)
+  6. Identify gaps and inconsistencies
+  7. Suggest improvements
+
+  Evaluation Criteria:
+  - **Completeness** (0-10): All sections present and adequately detailed
+  - **Accuracy** (0-10): Findings align with survey data
+  - **Standards Alignment** (0-10): Proper grounding in industry frameworks
+  - **Actionability** (0-10): Recommendations are specific, prioritized, timeline-bound
+  - **Professionalism** (0-10): Executive-ready quality, clear writing
+  - **Visualizations** (0-10): Charts and graphs enhance understanding
+
+  Output Format:
+  Provide your evaluation as a JSON object with the following structure:
+  ```json
+  {
+    "overall_score": float (0-10),
+    "scores": {
+      "completeness": float,
+      "accuracy": float,
+      "standards_alignment": float,
+      "actionability": float,
+      "professionalism": float,
+      "visualizations": float
+    },
+    "strengths": [str],
+    "weaknesses": [str],
+    "gaps": [
+      {
+        "section": str,
+        "issue": str,
+        "severity": str ("Critical", "High", "Medium", "Low"),
+        "suggestion": str
+      }
+    ],
+    "recommended_changes": [
+      {
+        "location": str,
+        "current": str,
+        "suggested": str,
+        "rationale": str
+      }
+    ],
+    "approval_status": str ("Approved", "Needs Minor Revisions", "Needs Major Revisions"),
+    "summary": str
+  }
+  ```
+
+  If approval_status is not "Approved", provide specific, actionable suggestions.
+
+inputs:
+  - name: report_markdown
+    type: string
+    description: Draft report from Report Generator Agent
+    required: true
+
+  - name: survey_data
+    type: object
+    description: Original survey data for accuracy verification
+    required: true
+
+  - name: maturity_assessment
+    type: object
+    description: Maturity assessment for consistency checking
+    required: true
+
+outputs:
+  - name: quality_score
+    type: float
+    description: Overall quality score (0-10)
+
+  - name: evaluation
+    type: object
+    description: Detailed evaluation with scores and suggestions
+
+  - name: revised_report
+    type: string
+    description: Revised report (if revisions made) or original
+
+  - name: approval_status
+    type: string
+    description: Approval decision
+
+reasoning_mode: chain_of_thought
+
+evaluation_checklist:
+  completeness:
+    - "Executive Summary present with key findings"
+    - "Current State Assessment with metrics"
+    - "Maturity Analysis with level and gaps"
+    - "Detailed Findings by category/process/lifecycle"
+    - "Visualizations included"
+    - "Action Items prioritized"
+    - "Roadmap with phases and timelines"
+
+  accuracy:
+    - "Scores match survey data"
+    - "Maturity level justified by findings"
+    - "Statistics correctly calculated"
+    - "Comments themes accurately extracted"
+
+  standards_alignment:
+    - "References to relevant standards (GDPR, DAMA, NIST, ISO)"
+    - "Gap analysis tied to standard requirements"
+    - "Maturity model properly applied"
+
+  actionability:
+    - "Recommendations are specific (not vague)"
+    - "Prioritization with risk/impact rationale"
+    - "Timelines assigned (0-3, 3-6, 6-12 months)"
+    - "Success metrics defined"
+
+  professionalism:
+    - "Executive-ready tone and language"
+    - "Clear structure with proper headers"
+    - "No grammatical errors"
+    - "Professional formatting"
+
+examples:
+  - input:
+      report_markdown: |
+        # Data Privacy Report
+        The organization has some privacy policies...
+      survey_data:
+        overall_metrics:
+          avg_score: 7.2
+    output:
+      overall_score: 6.5
+      scores:
+        completeness: 5.0
+        accuracy: 8.0
+      gaps:
+        - section: "Maturity Analysis"
+          issue: "Missing detailed gap analysis"
+          severity: "High"
+          suggestion: "Add specific gaps with severity ratings"
+      approval_status: "Needs Major Revisions"
+
+metadata:
+  version: "1.0"
+  author: "Entrust Migration Team"
+  created: "2025-11-13"
+  tags:
+    - quality_assurance
+    - report_review
+    - self_critique

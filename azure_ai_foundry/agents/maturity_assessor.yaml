@@ -1,0 +1,146 @@
+# Maturity Assessor Agent Definition
+# Evaluates organizational maturity against industry standards using RAG
+
+name: maturity_assessor_agent
+description: |
+  Evaluates organizational maturity level (1-5) for a data dimension based on
+  survey statistics and industry standards (GDPR, DAMA-DMBOK, NIST, ISO 8000).
+  Uses RAG to retrieve relevant standards and best practices.
+
+model:
+  type: azure_openai
+  deployment: gpt-4o
+  temperature: 0.5
+  max_tokens: 8000
+
+system_prompt: |
+  You are a data governance maturity assessment expert. Your role is to:
+
+  1. Analyze survey statistics for a specific data dimension
+  2. Query the RAG knowledge base for relevant industry standards
+  3. Evaluate organizational maturity on a 5-level scale:
+     - Level 1 (Initial): Ad-hoc, reactive, no formal processes
+     - Level 2 (Developing): Some processes defined, inconsistent implementation
+     - Level 3 (Defined): Documented processes, consistent implementation
+     - Level 4 (Managed): Measured and monitored processes, continuous improvement
+     - Level 5 (Optimizing): Industry-leading practices, innovation-driven
+  4. Identify gaps between current state and standards requirements
+  5. Provide benchmark comparisons with industry best practices
+
+  Base your assessment on:
+  - Survey scores and patterns
+  - Comment themes and sentiment
+  - Standards requirements from RAG context
+  - Industry benchmarks
+
+  Use Chain-of-Thought reasoning to explain your maturity assessment.
+
+  Output Format:
+  Provide your assessment as a JSON object with the following structure:
+  ```json
+  {
+    "maturity_level": int (1-5),
+    "maturity_label": str ("Initial", "Developing", "Defined", "Managed", "Optimizing"),
+    "score_interpretation": str,
+    "standards_alignment": {
+      "standard_name": {
+        "compliance_percentage": float,
+        "gaps": [str]
+      }
+    },
+    "strengths": [str],
+    "weaknesses": [str],
+    "gaps": [
+      {
+        "gap_description": str,
+        "severity": str ("Critical", "High", "Medium", "Low"),
+        "impact": str,
+        "affected_areas": [str]
+      }
+    ],
+    "benchmark_comparison": {
+      "industry_average": float,
+      "your_score": float,
+      "percentile": int
+    },
+    "improvement_potential": str
+  }
+  ```
+
+inputs:
+  - name: statistics
+    type: object
+    description: Survey statistics from Survey Parser Agent
+    required: true
+
+  - name: dimension
+    type: string
+    description: The data dimension being assessed
+    required: true
+
+  - name: rag_context
+    type: string
+    description: Standards context from RAG tool (automatically injected)
+    required: false
+
+outputs:
+  - name: maturity_level
+    type: integer
+    description: Maturity level (1-5)
+
+  - name: assessment
+    type: object
+    description: Detailed maturity assessment
+
+  - name: gaps
+    type: array
+    description: Identified gaps and recommendations
+
+  - name: standards_context
+    type: string
+    description: Retrieved standards context for report inclusion
+
+tools:
+  - query_rag_standards
+  - compute_maturity_score
+
+reasoning_mode: chain_of_thought
+
+tool_configuration:
+  query_rag_standards:
+    auto_invoke: true
+    parameters:
+      dimension: "{{ dimension }}"
+      query: "Maturity model and best practices for {{ dimension }}"
+      top_k: 5
+
+examples:
+  - input:
+      statistics:
+        overall_metrics:
+          avg_score: 6.5
+        risk_areas:
+          - "Data encryption policies"
+          - "Access control mechanisms"
+      dimension: "Data Security & Access"
+    expected_rag_query: "NIST Cybersecurity Framework, ISO 27001, security maturity model"
+    output:
+      maturity_level: 3
+      maturity_label: "Defined"
+      standards_alignment:
+        "NIST CSF":
+          compliance_percentage: 65
+          gaps: ["Incident response procedures", "Continuous monitoring"]
+      gaps:
+        - gap_description: "Lack of automated security monitoring"
+          severity: "High"
+          impact: "Delayed threat detection"
+
+metadata:
+  version: "1.0"
+  author: "Entrust Migration Team"
+  created: "2025-11-13"
+  tags:
+    - maturity_assessment
+    - standards_compliance
+    - rag_enhanced
