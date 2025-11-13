@@ -68,29 +68,33 @@ def check_reports_path_exists() -> bool:
 
 def get_report_paths(customer_code: str, dimension: str) -> Dict[str, str]:
     """
-    Get the full paths for markdown and JSON reports
+    Get the full paths for markdown, JSON, and HTML reports
 
     Args:
         customer_code: Customer code
         dimension: Dimension name
 
     Returns:
-        Dict with 'markdown' and 'json' paths
+        Dict with 'markdown', 'json', and 'html' paths
     """
     dimension_filename = get_dimension_filename(dimension)
     date_str = datetime.now().strftime("%Y%m%d")
 
     markdown_dir = os.path.join(REPORTS_BASE_PATH, "reports", customer_code)
     json_dir = os.path.join(REPORTS_BASE_PATH, "report_json", customer_code)
+    html_dir = os.path.join(REPORTS_BASE_PATH, "report_html", customer_code)
 
     markdown_path = os.path.join(markdown_dir, f"{dimension_filename}_report_{date_str}.md")
     json_path = os.path.join(json_dir, f"{dimension_filename}_report_{date_str}.json")
+    html_path = os.path.join(html_dir, f"{dimension_filename}_report_{date_str}.html")
 
     return {
         "markdown": markdown_path,
         "json": json_path,
+        "html": html_path,
         "markdown_dir": markdown_dir,
-        "json_dir": json_dir
+        "json_dir": json_dir,
+        "html_dir": html_dir
     }
 
 
@@ -302,6 +306,189 @@ def create_markdown_report(
     return markdown
 
 
+def markdown_to_html(markdown_content: str, dimension: str, customer_name: str) -> str:
+    """
+    Convert markdown to HTML with inline CSS
+
+    Args:
+        markdown_content: Markdown content
+        dimension: Dimension name for title
+        customer_name: Customer name for title
+
+    Returns:
+        HTML string with inline CSS
+    """
+    try:
+        import markdown as md
+    except ImportError:
+        logger.warning("markdown library not available, using basic HTML wrapper")
+        # Fallback: basic HTML wrapper with escaped content
+        escaped_content = markdown_content.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        html_body = f'<pre>{escaped_content}</pre>'
+    else:
+        # Convert markdown to HTML
+        html_body = md.markdown(
+            markdown_content,
+            extensions=['tables', 'fenced_code', 'nl2br']
+        )
+
+    # Inline CSS styles
+    css = """
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1e40af;
+            border-bottom: 3px solid #10b981;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        h2 {
+            color: #1e40af;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 8px;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #374151;
+            margin-top: 24px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: white;
+        }
+        table thead {
+            background-color: #1e40af;
+            color: white;
+        }
+        table th,
+        table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #e5e7eb;
+        }
+        table tbody tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        table tbody tr:hover {
+            background-color: #f3f4f6;
+        }
+        ul, ol {
+            margin: 10px 0;
+            padding-left: 30px;
+        }
+        li {
+            margin: 5px 0;
+        }
+        code {
+            background-color: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background-color: #1f2937;
+            color: #f9fafb;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        pre code {
+            background-color: transparent;
+            color: #f9fafb;
+            padding: 0;
+        }
+        blockquote {
+            border-left: 4px solid #10b981;
+            padding-left: 20px;
+            margin: 20px 0;
+            color: #6b7280;
+            font-style: italic;
+        }
+        hr {
+            border: none;
+            border-top: 2px solid #e5e7eb;
+            margin: 30px 0;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e40af 0%, #10b981 100%);
+            color: white;
+            border-radius: 8px;
+        }
+        .header h1 {
+            margin: 0;
+            color: white;
+            border: none;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 0.9em;
+        }
+        @media print {
+            body {
+                background-color: white;
+            }
+            .container {
+                box-shadow: none;
+                padding: 0;
+            }
+        }
+    """
+
+    # Build complete HTML document
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{dimension} Report - {customer_name}</title>
+    <style>
+        {css}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>EnTrust Data Governance Report</h1>
+            <p><strong>{dimension}</strong> | {customer_name}</p>
+        </div>
+        {html_body}
+        <div class="footer">
+            <p>Generated by EnTrust Survey Analysis Platform on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
+        </div>
+    </div>
+</body>
+</html>"""
+
+    return html
+
+
 def save_reports(
     customer_code: str,
     customer_name: str,
@@ -310,7 +497,7 @@ def save_reports(
     rag_context: Optional[str] = None
 ) -> Dict[str, Optional[str]]:
     """
-    Save reports in both markdown and JSON formats
+    Save reports in markdown, JSON, and HTML formats
 
     Args:
         customer_code: Customer code
@@ -320,11 +507,12 @@ def save_reports(
         rag_context: Optional RAG context that was retrieved
 
     Returns:
-        Dict with 'markdown_path' and 'json_path' (None if path doesn't exist or save failed)
+        Dict with 'markdown_path', 'json_path', and 'html_path' (None if path doesn't exist or save failed)
     """
     result = {
         "markdown_path": None,
         "json_path": None,
+        "html_path": None,
         "error": None
     }
 
@@ -340,6 +528,7 @@ def save_reports(
         # Create directories if they don't exist
         os.makedirs(paths['markdown_dir'], exist_ok=True)
         os.makedirs(paths['json_dir'], exist_ok=True)
+        os.makedirs(paths['html_dir'], exist_ok=True)
 
         # Create markdown report
         markdown_content = create_markdown_report(
@@ -378,6 +567,13 @@ def save_reports(
             json.dump(json_data, f, indent=2, ensure_ascii=False, cls=DateTimeEncoder)
         result['json_path'] = paths['json']
         logger.info(f"Saved JSON report to {paths['json']}")
+
+        # Convert markdown to HTML and save
+        html_content = markdown_to_html(markdown_content, dimension, customer_name)
+        with open(paths['html'], 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        result['html_path'] = paths['html']
+        logger.info(f"Saved HTML report to {paths['html']}")
 
     except Exception as e:
         logger.error(f"Error saving reports: {str(e)}\n{traceback.format_exc()}")

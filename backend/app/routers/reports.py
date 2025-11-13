@@ -359,6 +359,10 @@ async def get_dimension_report(
     all_comments = [r.comment for r in all_responses if r.comment]
     total_respondents = len(set(r.user_id for r in all_responses))
 
+    # Ensure total_users is at least as many as actual respondents
+    # (handles case where users are unassigned after responding)
+    total_users = max(total_respondents, total_users)
+
     overall_metrics = {
         'avg_score': round(sum(all_numeric_scores) / len(all_numeric_scores), 2) if all_numeric_scores else None,
         'min_score': round(min(all_numeric_scores), 2) if all_numeric_scores else None,
