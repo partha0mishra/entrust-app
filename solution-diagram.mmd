@@ -1,0 +1,130 @@
+%% EnTrust Data Governance Survey Platform - Solution Architecture Diagram
+%% This diagram shows the complete system architecture including frontend, backend, database, and AI components
+
+graph TB
+    %% User Layer
+    subgraph "User Layer"
+        Admin[System Administrator]
+        CXO[CXO User]
+        Participant[Participant User]
+        Sales[Sales User]
+    end
+
+    %% Frontend Layer
+    subgraph Frontend["Frontend Layer (React + Vite)"]
+        Login[Login Page]
+        CustomerMgmt[Customer Management]
+        UserMgmt[User Management]
+        LLMConfigUI[LLM Configuration]
+        SurveyDash[Survey Dashboard]
+        SurveySection[Survey Section Pages]
+        ReportsUI[Reports Dashboard]
+    end
+
+    %% API Gateway / Backend
+    subgraph Backend["Backend API Layer (FastAPI)"]
+        direction TB
+        API[FastAPI Application]
+        
+        subgraph Routers["API Routers"]
+            AuthRouter["/api/auth<br/>Authentication"]
+            CustomerRouter["/api/customers<br/>Customer Management"]
+            UserRouter["/api/users<br/>User Management"]
+            LLMConfigRouter["/api/llm-config<br/>LLM Configuration"]
+            SurveyRouter["/api/survey<br/>Survey Operations"]
+            ReportsRouter["/api/reports<br/>Report Generation"]
+        end
+        
+        subgraph Services["Core Services"]
+            AuthService[Authentication Service]
+            LLMService[LLM Service]
+            RAGService[RAG Service]
+        end
+        
+        subgraph Agents["Agentic System"]
+            Orchestrator[Workflow Orchestrator]
+            SurveyParser[Survey Parser Agent]
+            MaturityAssessor[Maturity Assessor Agent]
+            ReportGenerator[Report Generator Agent]
+            SelfCritic[Self-Critic Agent]
+            PDFFormatter[PDF Formatter Agent]
+        end
+    end
+
+    %% Data Layer
+    subgraph DataLayer["Data Layer"]
+        PostgreSQL[(PostgreSQL Database<br/>- Customers<br/>- Users<br/>- Questions<br/>- Surveys<br/>- Responses<br/>- LLM Configs)]
+        ChromaDB[(ChromaDB<br/>Vector Store<br/>RAG Embeddings)]
+        KnowledgeBase[Knowledge Base<br/>Domain Expertise Files]
+    end
+
+    %% External Services
+    subgraph External["External LLM Providers"]
+        LocalLLM[Local LLM<br/>LM Studio, etc.]
+        AWSBedrock[AWS Bedrock<br/>Claude Models]
+        AzureOpenAI[Azure OpenAI<br/>GPT Models]
+    end
+
+    %% User to Frontend connections
+    Admin --> Login
+    CXO --> Login
+    Participant --> Login
+    Sales --> Login
+
+    %% Frontend to Backend connections
+    Login --> AuthRouter
+    CustomerMgmt --> CustomerRouter
+    UserMgmt --> UserRouter
+    LLMConfigUI --> LLMConfigRouter
+    SurveyDash --> SurveyRouter
+    SurveySection --> SurveyRouter
+    ReportsUI --> ReportsRouter
+
+    %% Router to Service connections
+    AuthRouter --> AuthService
+    CustomerRouter --> API
+    UserRouter --> API
+    LLMConfigRouter --> API
+    SurveyRouter --> API
+    ReportsRouter --> Orchestrator
+
+    %% Service connections
+    AuthService --> PostgreSQL
+    API --> PostgreSQL
+    LLMService --> LocalLLM
+    LLMService --> AWSBedrock
+    LLMService --> AzureOpenAI
+
+    %% Agentic workflow
+    Orchestrator --> SurveyParser
+    Orchestrator --> MaturityAssessor
+    Orchestrator --> ReportGenerator
+    Orchestrator --> SelfCritic
+    Orchestrator --> PDFFormatter
+    
+    SurveyParser --> PostgreSQL
+    MaturityAssessor --> RAGService
+    ReportGenerator --> LLMService
+    SelfCritic --> LLMService
+    PDFFormatter --> ReportGenerator
+
+    %% RAG connections
+    RAGService --> ChromaDB
+    RAGService --> KnowledgeBase
+    MaturityAssessor --> KnowledgeBase
+
+    %% Styling
+    classDef frontend fill:#e1f5ff,stroke:#01579b,stroke-width:2px
+    classDef backend fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef database fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
+    classDef external fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef agent fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef user fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+
+    class Login,CustomerMgmt,UserMgmt,LLMConfigUI,SurveyDash,SurveySection,ReportsUI frontend
+    class API,AuthRouter,CustomerRouter,UserRouter,LLMConfigRouter,SurveyRouter,ReportsRouter,AuthService,LLMService,RAGService backend
+    class PostgreSQL,ChromaDB,KnowledgeBase database
+    class LocalLLM,AWSBedrock,AzureOpenAI external
+    class Orchestrator,SurveyParser,MaturityAssessor,ReportGenerator,SelfCritic,PDFFormatter agent
+    class Admin,CXO,Participant,Sales user
+
