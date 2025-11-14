@@ -138,7 +138,24 @@ class AWSBedrockProvider(BaseLLMProvider):
         """Test connection to AWS Bedrock"""
         try:
             import asyncio
-            client = self._get_client()
+            import boto3
+            from botocore.config import Config
+
+            # Use a short timeout specifically for connection testing (30 seconds like other providers)
+            # This is separate from the main client's timeout used for regular calls
+            test_config = Config(
+                read_timeout=30,
+                retries={'max_attempts': 3}
+            )
+
+            test_client = boto3.client(
+                'bedrock-runtime',
+                region_name=self.region,
+                aws_access_key_id=self.access_key_id,
+                aws_secret_access_key=self.secret_access_key,
+                config=test_config,
+                verify=False
+            )
 
             # Prepare a simple test request
             # If thinking mode is enabled, max_tokens must be greater than budget_tokens (10000)
@@ -151,7 +168,7 @@ class AWSBedrockProvider(BaseLLMProvider):
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(
                 None,
-                lambda: client.invoke_model(
+                lambda: test_client.invoke_model(
                     modelId=self.model_id,
                     body=json.dumps(body),
                     contentType='application/json',  # As per bedrock_access_guide.md
