@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script to fill test data for major tech companies (MSFT, GOOG, AAPL, AMZN).
+Script to fill test data for major tech companies (TSFT, NOOD, FRUT, MRKT).
 Creates customers, users, and fills survey responses for each company.
 """
 import sys
@@ -14,79 +14,79 @@ from app import models, auth
 # Company configurations
 COMPANIES = [
     {
-        "customer_code": "MSFT",
-        "name": "Microsoft Corp",
+        "customer_code": "TSFT",
+        "name": "TechSoft Corp",
         "industry": "Software",
         "location": "Redmond, WA",
-        "description": "Microsoft Corporation is an American multinational technology conglomerate headquartered in Redmond, Washington.",
+        "description": "TechSoft Corporation is a multinational technology company specializing in enterprise software solutions and cloud services.",
         "cxo": {
-            "user_id": "snadella",
-            "username": "Satya Nadella",
+            "user_id": "snavarro",
+            "username": "Sam Navarro",
             "password": "Welcome123!"
         },
         "participants": [
-            {"user_id": "ahood", "username": "Amy Hood"},
-            {"user_id": "smehta", "username": "Satya Mehta"},
-            {"user_id": "jphillips", "username": "Judson Phillips"},
-            {"user_id": "kscott", "username": "Kevin Scott"},
-            {"user_id": "bsmith", "username": "Brad Smith"}
+            {"user_id": "aholt", "username": "Alex Holt"},
+            {"user_id": "smiller", "username": "Sarah Miller"},
+            {"user_id": "jpatel", "username": "James Patel"},
+            {"user_id": "kchen", "username": "Kelly Chen"},
+            {"user_id": "bwright", "username": "Blake Wright"}
         ]
     },
     {
-        "customer_code": "GOOG",
-        "name": "Alphabet Inc Class C",
+        "customer_code": "NOOD",
+        "name": "Noodle Inc",
         "industry": "Software",
         "location": "Mountain View, CA",
-        "description": "Alphabet Inc. is an American multinational technology conglomerate holding company headquartered in Mountain View, California. Alphabet is the world's third-largest technology company by revenue, after Amazon and Apple, the largest technology company by profit, and one of the world's most valuable companies.",
+        "description": "Noodle Inc is a technology company focused on search, cloud computing, and digital services.",
         "cxo": {
-            "user_id": "spichai",
-            "username": "Sundar Pichai",
+            "user_id": "ppatel",
+            "username": "Priya Patel",
             "password": "Welcome123!"
         },
         "participants": [
-            {"user_id": "rporat", "username": "Ruth Porat"},
-            {"user_id": "pschindler", "username": "Philipp Schindler"},
-            {"user_id": "jdean", "username": "Jeff Dean"},
-            {"user_id": "pbraverman", "username": "Prabhakar Raghavan"},
-            {"user_id": "twalker", "username": "Thomas Kurian"}
+            {"user_id": "rkim", "username": "Ryan Kim"},
+            {"user_id": "psingh", "username": "Priya Singh"},
+            {"user_id": "jdavis", "username": "Jordan Davis"},
+            {"user_id": "pramirez", "username": "Pablo Ramirez"},
+            {"user_id": "tlee", "username": "Taylor Lee"}
         ]
     },
     {
-        "customer_code": "AAPL",
-        "name": "Apple Inc",
+        "customer_code": "FRUT",
+        "name": "FruitTech Inc",
         "industry": "Software",
         "location": "Cupertino, CA",
-        "description": "Apple Inc. is an American multinational technology company headquartered in Cupertino, California, in Silicon Valley, best known for its consumer electronics, software and online services.",
+        "description": "FruitTech Inc is a technology company known for consumer electronics, software, and online services.",
         "cxo": {
-            "user_id": "tcook",
-            "username": "Tim Cook",
+            "user_id": "tcarter",
+            "username": "Tom Carter",
             "password": "Welcome123!"
         },
         "participants": [
-            {"user_id": "lmaestri", "username": "Luca Maestri"},
-            {"user_id": "jternus", "username": "Jeff Williams"},
-            {"user_id": "dgiannandrea", "username": "Deirdre O'Brien"},
-            {"user_id": "kknowling", "username": "Kate Adams"},
-            {"user_id": "gsrouji", "username": "Johny Srouji"}
+            {"user_id": "lmartinez", "username": "Lisa Martinez"},
+            {"user_id": "jwilson", "username": "Jamie Wilson"},
+            {"user_id": "dobrien", "username": "Dana O'Brien"},
+            {"user_id": "kadams", "username": "Kyle Adams"},
+            {"user_id": "gsmith", "username": "Grace Smith"}
         ]
     },
     {
-        "customer_code": "AMZN",
-        "name": "Amazon.com Inc",
+        "customer_code": "MRKT",
+        "name": "MarketPlace Inc",
         "industry": "eCommerce",
         "location": "Seattle, WA",
-        "description": "Amazon.com, Inc., doing business as Amazon, is an American multinational technology company engaged in e-commerce, cloud computing, online advertising, digital streaming, and artificial intelligence.",
+        "description": "MarketPlace Inc is a technology company engaged in e-commerce, cloud computing, and digital services.",
         "cxo": {
-            "user_id": "ajassy",
-            "username": "Andy Jassy",
+            "user_id": "ajones",
+            "username": "Alex Jones",
             "password": "Welcome123!"
         },
         "participants": [
-            {"user_id": "bolsavsky", "username": "Brian Olsavsky"},
-            {"user_id": "aselipsky", "username": "Adam Selipsky"},
-            {"user_id": "dclark", "username": "Dave Clark"},
-            {"user_id": "aherrington", "username": "Andy Herrington"},
-            {"user_id": "jsassy", "username": "Jeff Wilke"}
+            {"user_id": "boliver", "username": "Ben Oliver"},
+            {"user_id": "astewart", "username": "Alex Stewart"},
+            {"user_id": "dclark", "username": "Diana Clark"},
+            {"user_id": "aharris", "username": "Ashley Harris"},
+            {"user_id": "jwalsh", "username": "Jessica Walsh"}
         ]
     }
 ]
@@ -329,7 +329,7 @@ def create_company_data(db: Session, company_config: dict):
                 survey_id=survey.id,
                 user_id=cxo_user.id,
                 question_id=question.id,
-                score=score,
+                score=str(score),
                 comment=comment[:200]
             )
             db.add(response)
@@ -363,7 +363,7 @@ def create_company_data(db: Session, company_config: dict):
                     survey_id=survey.id,
                     user_id=participant.id,
                     question_id=question.id,
-                    score=score,
+                    score=str(score),
                     comment=comment[:200] if comment else None
                 )
                 db.add(response)
@@ -438,7 +438,7 @@ def create_all_companies_data():
     try:
         print(f"\n{'='*70}")
         print(f"  CREATING DATA FOR MAJOR TECH COMPANIES")
-        print(f"  Companies: MSFT, GOOG, AAPL, AMZN")
+        print(f"  Companies: TSFT, NOOD, FRUT, MRKT")
         print(f"{'='*70}")
 
         for company_config in COMPANIES:
@@ -495,7 +495,7 @@ if __name__ == "__main__":
     if args.force:
         db = SessionLocal()
         try:
-            print(f"\n🗑️  Force mode: Deleting existing data for MSFT, GOOG, AAPL, AMZN...")
+            print(f"\n🗑️  Force mode: Deleting existing data for TSFT, NOOD, FRUT, MRKT...")
 
             for company_config in COMPANIES:
                 customer = db.query(models.Customer).filter(

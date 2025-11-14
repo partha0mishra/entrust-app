@@ -49,13 +49,7 @@ export default function Reports() {
 
   const loadCustomers = async (userData) => {
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${API_URL}/api/reports/customers`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
+      const data = await reportAPI.getCustomers();
       
       // Debug: Log customers
       console.log('Customers loaded:', data);

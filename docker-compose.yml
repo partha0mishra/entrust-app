@@ -49,8 +49,10 @@ services:
         done &&
         echo 'PostgreSQL is ready! Deploying database...' &&
         python deploy_db.py &&
-        echo 'Filling test data (NVIDIA)...' &&
+        echo 'Filling test data (GPUTech)...' &&
         python fill_test_data.py &&
+        echo 'Filling test data (TechSoft, Noodle, FruitTech, MarketPlace)...' &&
+        python fill_msft_goog_aapl_amzn.py &&
         echo 'Starting FastAPI server...' &&
         uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
       "

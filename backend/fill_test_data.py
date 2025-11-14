@@ -20,9 +20,9 @@ def create_test_data():
         print("  CREATING TEST DATA FOR REPORT GENERATION")
         print("=" * 70)
 
-        # Quick check: if NVIDIA customer exists and has a completed survey, skip
+        # Quick check: if GPUTech customer exists and has a completed survey, skip
         existing_customer = db.query(models.Customer).filter(
-            models.Customer.customer_code == "NVDA"
+            models.Customer.customer_code == "GPTC"
         ).first()
 
         if existing_customer:
@@ -37,7 +37,7 @@ def create_test_data():
                 ).count()
 
                 if response_count > 0:
-                    print("\n✓ NVIDIA test data already exists and is complete!")
+                    print("\n✓ GPUTech test data already exists and is complete!")
                     print(f"   Customer: {existing_customer.name}")
                     print(f"   Survey Status: {completed_survey.status}")
                     print(f"   Responses: {response_count}")
@@ -48,16 +48,16 @@ def create_test_data():
         # Step 1: Create test customer
         print("\n[1/5] Creating test customer...")
         customer = db.query(models.Customer).filter(
-            models.Customer.customer_code == "NVDA"
+            models.Customer.customer_code == "GPTC"
         ).first()
 
         if not customer:
             customer = models.Customer(
-                customer_code="NVDA",
-                name="NVIDIA",
+                customer_code="GPTC",
+                name="GPUTech Inc",
                 industry="High Tech",
                 location="Santa Clara, CA",
-                description="Nvidia Corporation is an American technology company headquartered in Santa Clara, California. Founded in 1993 by Jensen Huang, Chris Malachowsky, and Curtis Priem"
+                description="GPUTech Inc is a technology company specializing in graphics processing and AI computing solutions"
             )
             db.add(customer)
             db.commit()
@@ -69,16 +69,16 @@ def create_test_data():
         # Step 2: Create test users
         print("\n[2/5] Creating test users...")
 
-        # Create CXO user (Jensen Huang)
+        # Create CXO user
         cxo_user = db.query(models.User).filter(
-            models.User.user_id == "jhuang"
+            models.User.user_id == "jharris"
         ).first()
 
         if not cxo_user:
             cxo_password = "Welcome123!"
             cxo_user = models.User(
-                user_id="jhuang",
-                username="Jensen Huang",
+                user_id="jharris",
+                username="James Harris",
                 password_hash=auth.get_password_hash(cxo_password),
                 password=auth.encrypt_password(cxo_password),
                 user_type=models.UserType.CXO,
@@ -96,16 +96,16 @@ def create_test_data():
         # Create Participant users
         participant_users = []
 
-        # Participant 1: Partha Mishra
+        # Participant 1
         partha = db.query(models.User).filter(
-            models.User.user_id == "Partha"
+            models.User.user_id == "panderson"
         ).first()
 
         if not partha:
             partha_password = "Welcome123!"
             partha = models.User(
-                user_id="Partha",
-                username="Partha Mishra",
+                user_id="panderson",
+                username="Patricia Anderson",
                 password_hash=auth.get_password_hash(partha_password),
                 password=auth.encrypt_password(partha_password),
                 user_type=models.UserType.PARTICIPANT,
@@ -122,16 +122,16 @@ def create_test_data():
 
         participant_users.append(partha)
 
-        # Participant 2: Madhu Ivaturi
+        # Participant 2
         madhu = db.query(models.User).filter(
-            models.User.user_id == "Madhu"
+            models.User.user_id == "mrodriguez"
         ).first()
 
         if not madhu:
             madhu_password = "Welcome123!"
             madhu = models.User(
-                user_id="Madhu",
-                username="Madhu Ivaturi",
+                user_id="mrodriguez",
+                username="Michael Rodriguez",
                 password_hash=auth.get_password_hash(madhu_password),
                 password=auth.encrypt_password(madhu_password),
                 user_type=models.UserType.PARTICIPANT,
@@ -422,9 +422,9 @@ def create_test_data():
         print(f"Total Responses: {cxo_responses_count + participant_responses_count}")
         print(f"Survey Status: {survey.status}")
         print("\nLogin Credentials:")
-        print(f"  CXO: jhuang / Welcome123! (Jensen Huang)")
-        print(f"  Participant: Partha / Welcome123! (Partha Mishra)")
-        print(f"  Participant: Madhu / Welcome123! (Madhu Ivaturi)")
+        print(f"  CXO: jharris / Welcome123! (James Harris)")
+        print(f"  Participant: panderson / Welcome123! (Patricia Anderson)")
+        print(f"  Participant: mrodriguez / Welcome123! (Michael Rodriguez)")
         print(f"  Sales: Nagaraj / Welcome123! (Nagaraj Sastry)")
         print("\n✓ Test data created successfully!")
         print("=" * 70)
@@ -439,18 +439,18 @@ def create_test_data():
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Fill database with NVIDIA test data")
+    parser = argparse.ArgumentParser(description="Fill database with GPUTech test data")
     parser.add_argument('--force', action='store_true',
                         help='Force recreate test data even if it already exists')
     args = parser.parse_args()
 
-    # If force flag is set, delete existing NVIDIA data
+    # If force flag is set, delete existing GPUTech data
     if args.force:
         db = SessionLocal()
         try:
-            print("\n🗑️  Force mode: Deleting existing NVIDIA data...")
+            print("\n🗑️  Force mode: Deleting existing GPUTech data...")
             customer = db.query(models.Customer).filter(
-                models.Customer.customer_code == "NVDA"
+                models.Customer.customer_code == "GPTC"
             ).first()
 
             if customer:
@@ -471,9 +471,9 @@ if __name__ == "__main__":
                 # Delete customer
                 db.delete(customer)
                 db.commit()
-                print("✓ Existing NVIDIA data deleted.\n")
+                print("✓ Existing GPUTech data deleted.\n")
             else:
-                print("⚠ No existing NVIDIA data found.\n")
+                print("⚠ No existing GPUTech data found.\n")
         except Exception as e:
             print(f"✗ Error deleting data: {e}")
             db.rollback()

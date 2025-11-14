@@ -20,6 +20,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
+RUN chmod +x start-container.sh
 
 # Ensure questions.json is copied (explicit copy for clarity)
 # If questions.json exists in backend directory, it will be copied by COPY . .
@@ -29,5 +30,5 @@ COPY questions.json /app/questions.json
 # Expose port
 EXPOSE 8000
 
-# Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Run the application via startup script
+CMD ["/app/start-container.sh"]
