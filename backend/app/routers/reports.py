@@ -414,15 +414,37 @@ async def get_dimension_report(
     # Comment analysis
     comment_insights = analyze_comments_basic(all_comments)
 
-    # Get LLM config
+    # Get LLM config - try dimension-specific first, then fall back to Default
+    # URL decode the dimension name in case it's encoded (e.g., "Data Privacy & Compliance" might come as "Data Privacy %26 Compliance")
+    from urllib.parse import unquote
+    decoded_dimension = unquote(dimension)
+    
+    logger.info(f"Looking for LLM config: dimension='{dimension}' (decoded='{decoded_dimension}')")
+    
+    # Try exact match first
     llm_config = db.query(models.LLMConfig).filter(
-        models.LLMConfig.purpose == dimension
+        models.LLMConfig.purpose == decoded_dimension
     ).first()
-
+    
     if not llm_config:
+        # Try with original dimension (in case it wasn't encoded)
+        llm_config = db.query(models.LLMConfig).filter(
+            models.LLMConfig.purpose == dimension
+        ).first()
+    
+    if not llm_config:
+        # Fall back to Default
+        logger.info(f"No dimension-specific config found, trying 'Default'")
         llm_config = db.query(models.LLMConfig).filter(
             models.LLMConfig.purpose == "Default"
         ).first()
+    
+    # Log all available configs for debugging
+    all_configs = db.query(models.LLMConfig).all()
+    if all_configs:
+        logger.info(f"Available LLM configs: {[(c.purpose, c.status) for c in all_configs]}")
+    else:
+        logger.warning("No LLM configs found in database at all")
 
     # Generate dimension-level LLM analysis
     # Use asyncio.create_task to run LLM call in background - don't block the response
@@ -432,11 +454,18 @@ async def get_dimension_report(
 
     # Log LLM config status for debugging
     if llm_config:
-        logger.info(f"LLM config found for dimension '{dimension}': status='{llm_config.status}', provider='{llm_config.provider_type}', model='{llm_config.azure_deployment_name if llm_config.provider_type == models.LLMProviderType.AZURE else (llm_config.aws_model_id if llm_config.provider_type == models.LLMProviderType.BEDROCK else llm_config.model_name)}'")
+        model_name = (
+            llm_config.azure_deployment_name if llm_config.provider_type == models.LLMProviderType.AZURE 
+            else (llm_config.aws_model_id if llm_config.provider_type == models.LLMProviderType.BEDROCK 
+                  else llm_config.model_name)
+        )
+        logger.info(f"LLM config found for dimension '{dimension}': purpose='{llm_config.purpose}', status='{llm_config.status}', provider='{llm_config.provider_type}', model='{model_name}'")
         if llm_config.status != "Success":
-            logger.warning(f"LLM config status is '{llm_config.status}' - LLM analysis will be skipped. Please test the connection first.")
+            logger.warning(f"LLM config status is '{llm_config.status}' - LLM analysis will be skipped. Please test the connection first in LLM Configuration page.")
+            llm_error = f"LLM config found (purpose='{llm_config.purpose}') but status is '{llm_config.status}'. Please test the connection in LLM Configuration to set status to 'Success'."
     else:
-        logger.warning(f"No LLM config found for dimension '{dimension}' - using Default config if available")
+        logger.warning(f"No LLM config found for dimension '{dimension}' or 'Default' - LLM analysis will be skipped")
+        llm_error = f"No LLM config found for dimension '{dimension}' or 'Default'. Please configure an LLM in the LLM Configuration page."
 
     if llm_config and llm_config.status == "Success":
         try:
@@ -597,7 +626,7 @@ async def get_dimension_report(
         # RAG context
         "rag_context": rag_context,
 
-        "llm_error": llm_error if llm_error else ("Orchestrate LLM not configured or test not successful" if not (llm_config and llm_config.status == "Success") else None)
+        "llm_error": llm_error if llm_error else (f"LLM not configured or test not successful for dimension '{dimension}'. Please configure and test an LLM config with purpose='{dimension}' or 'Default' in the LLM Configuration page." if not (llm_config and llm_config.status == "Success") else None)
     }
 
     # Save reports to disk (markdown and JSON)
@@ -734,15 +763,27 @@ async def get_overall_report(
         
         # Generate dimension summary for overall report
         try:
+            from urllib.parse import unquote
+            decoded_dimension = unquote(dimension)
+            
             llm_config = db.query(models.LLMConfig).filter(
-                models.LLMConfig.purpose == dimension
+                models.LLMConfig.purpose == decoded_dimension
             ).first()
+            
+            if not llm_config:
+                llm_config = db.query(models.LLMConfig).filter(
+                    models.LLMConfig.purpose == dimension
+                ).first()
             
             # If dimension-specific config doesn't exist or is not tested, fall back to Default
             if not llm_config or (llm_config and llm_config.status != "Success"):
+                logger.info(f"Dimension '{dimension}' config not found or not successful, trying 'Default'")
                 llm_config = db.query(models.LLMConfig).filter(
                     models.LLMConfig.purpose == "Default"
                 ).first()
+            
+            if llm_config:
+                logger.info(f"LLM config for dimension '{dimension}': purpose='{llm_config.purpose}', status='{llm_config.status}'")
             
             if llm_config and llm_config.status == "Success":
                 llm_response = await LLMService.generate_dimension_summary(

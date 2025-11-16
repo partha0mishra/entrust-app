@@ -49,27 +49,42 @@ export default function Reports() {
 
   const loadCustomers = async (userData) => {
     try {
-      const data = await reportAPI.getCustomers();
-      
-      // Debug: Log customers
-      console.log('Customers loaded:', data);
-      console.log('Number of customers:', data.length);
+      const response = await reportAPI.getCustomers();
+      const possibleData = response?.data ?? response;
+      const data = Array.isArray(possibleData)
+        ? possibleData
+        : (Array.isArray(possibleData?.data) ? possibleData.data : []);
+
+      console.log('Customers API raw response:', response);
+      console.log('Customers resolved array:', data);
+      console.log('Number of customers:', Array.isArray(data) ? data.length : 0);
       
       setCustomers(data);
       
-      // Select first customer by default
-      if (data.length > 0) {
-        setSelectedCustomer(data[0]);
-        loadDimensions(userData, data[0].id);
+      if (Array.isArray(data) && data.length > 0) {
+        const initialCustomer = data[0];
+        setSelectedCustomer(initialCustomer);
+        setCustomerCode(initialCustomer.customer_code || null);
+        await loadDimensions(userData, initialCustomer.id, data, initialCustomer);
+      } else {
+        setSelectedCustomer(null);
+        setCustomerCode(null);
+        setDimensions([]);
       }
     } catch (error) {
       console.error('Failed to load customers:', error);
+      setCustomers([]);
+      setSelectedCustomer(null);
+      setCustomerCode(null);
+      setDimensions([]);
     }
   };
 
-  const loadDimensions = async (userData, customerId) => {
+  const loadDimensions = async (userData, customerId, customerListOverride = null, explicitCustomer = null) => {
     try {
+      console.log('🔄 Loading dimensions for customer:', customerId);
       const response = await reportAPI.getDimensions(customerId);
+      console.log('✅ Dimensions API response:', response?.data);
       
       // Check if response indicates no survey
       if (response.data && typeof response.data === 'object' && response.data.message) {
@@ -77,15 +92,16 @@ export default function Reports() {
         console.log('No survey data for this customer');
       } else {
         setDimensions(response.data);
+        console.log('✅ Dimensions set. Count:', Array.isArray(response.data) ? response.data.length : 0);
       }
       
-      // Find customer code
-      // Use a functional update for selectedCustomer to get the latest state
-      setSelectedCustomer(prevCustomer => {
-        const customer = customers.find(c => c && c.id === customerId) || prevCustomer;
-        setCustomerCode(customer && customer.customer_code ? customer.customer_code : null);
-        return customer;
-      });
+      const sourceCustomers = customerListOverride || customers;
+      const resolvedCustomer = explicitCustomer || sourceCustomers.find(c => c && c.id === customerId) || null;
+      
+      if (resolvedCustomer) {
+        setSelectedCustomer(resolvedCustomer);
+        setCustomerCode(resolvedCustomer.customer_code || null);
+      }
     } catch (error) {
       console.error('Failed to load dimensions:', error);
       setDimensions([]);
@@ -96,7 +112,7 @@ export default function Reports() {
     const customer = customers.find(c => c.id === parseInt(event.target.value));
     setSelectedCustomer(customer);
     setCustomerCode(customer?.customer_code || null);
-    loadDimensions(user, customer.id);
+    loadDimensions(user, customer.id, customers, customer);
     // Clear current report when changing customer
     setReport(null);
     setSelectedDimension(null);

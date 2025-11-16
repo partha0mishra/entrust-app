@@ -169,11 +169,18 @@ class ForwardedProtoMiddleware:
 
         await self.app(scope, receive, send)
 
-# Configure CORS - allow origins from environment or default to localhost
-ALLOWED_ORIGINS = os.getenv(
-    "ALLOWED_ORIGINS", 
-    "http://localhost:3000"
-).split(",")
+# Configure CORS - support both ALLOWED_ORIGINS and legacy CORS_ORIGINS env vars
+cors_origin_env = (
+    os.getenv("ALLOWED_ORIGINS")
+    or os.getenv("CORS_ORIGINS")
+    or "http://localhost:3000"
+)
+# Normalize by splitting on comma and stripping whitespace/empty values
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in cors_origin_env.split(",")
+    if origin.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
